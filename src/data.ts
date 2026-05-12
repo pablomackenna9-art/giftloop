@@ -155,14 +155,14 @@ export const LIPPI_PRODUCTS: Product[] = [
 ];
 
 export const FALABELLA_PRODUCTS: Product[] = [
-  { id: 'fal1', name: 'TV Samsung 65" 4K Neo QLED', brand: 'Falabella', price: 1199990, image: 'https://images.unsplash.com/photo-1571415060716-baff5f717c37?w=400&h=400&fit=crop', url: 'https://www.falabella.com.cl/', liked: false, category: 'Tecnología' },
-  { id: 'fal2', name: 'Zapatilla Nike Air Max 270', brand: 'Falabella', price: 119990, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop', url: 'https://www.falabella.com.cl/', liked: false, category: 'Calzado' },
-  { id: 'fal3', name: 'Perfume Chanel N°5 100ml', brand: 'Falabella', price: 129990, image: 'https://images.unsplash.com/photo-1541643600914-78b084683702?w=400&h=400&fit=crop', url: 'https://www.falabella.com.cl/', liked: false, category: 'Belleza' },
-  { id: 'fal4', name: 'Sofá Seccional Oslo 3C', brand: 'Falabella', price: 849990, image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop', url: 'https://www.falabella.com.cl/', liked: false, category: 'Hogar' },
-  { id: 'fal5', name: 'Notebook Lenovo IdeaPad', brand: 'Falabella', price: 549990, image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=400&fit=crop', url: 'https://www.falabella.com.cl/', liked: false, category: 'Tecnología' },
-  { id: 'fal6', name: 'Vestido Zara Floral', brand: 'Falabella', price: 59990, image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=400&fit=crop', url: 'https://www.falabella.com.cl/', liked: false, category: 'Ropa Mujer' },
-  { id: 'fal7', name: 'Set Cocina Tefal 10 piezas', brand: 'Falabella', price: 189990, image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop', url: 'https://www.falabella.com.cl/', liked: false, category: 'Cocina' },
-  { id: 'fal8', name: 'Bicicleta Trek FX2 Disc', brand: 'Falabella', price: 699990, image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop', url: 'https://www.falabella.com.cl/', liked: false, category: 'Deportes' },
+  { id: 'fal1', name: 'TV Samsung 65" 4K Neo QLED', brand: 'Falabella', price: 1199990, image: 'https://images.unsplash.com/photo-1571415060716-baff5f717c37?w=400&h=400&fit=crop', url: 'https://www.falabella.cl/', liked: false, category: 'Tecnología' },
+  { id: 'fal2', name: 'Zapatilla Nike Air Max 270', brand: 'Falabella', price: 119990, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop', url: 'https://www.falabella.cl/', liked: false, category: 'Calzado' },
+  { id: 'fal3', name: 'Perfume Chanel N°5 100ml', brand: 'Falabella', price: 129990, image: 'https://images.unsplash.com/photo-1541643600914-78b084683702?w=400&h=400&fit=crop', url: 'https://www.falabella.cl/', liked: false, category: 'Belleza' },
+  { id: 'fal4', name: 'Sofá Seccional Oslo 3C', brand: 'Falabella', price: 849990, image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop', url: 'https://www.falabella.cl/', liked: false, category: 'Hogar' },
+  { id: 'fal5', name: 'Notebook Lenovo IdeaPad', brand: 'Falabella', price: 549990, image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=400&fit=crop', url: 'https://www.falabella.cl/', liked: false, category: 'Tecnología' },
+  { id: 'fal6', name: 'Vestido Zara Floral', brand: 'Falabella', price: 59990, image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=400&fit=crop', url: 'https://www.falabella.cl/', liked: false, category: 'Ropa Mujer' },
+  { id: 'fal7', name: 'Set Cocina Tefal 10 piezas', brand: 'Falabella', price: 189990, image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop', url: 'https://www.falabella.cl/', liked: false, category: 'Cocina' },
+  { id: 'fal8', name: 'Bicicleta Trek FX2 Disc', brand: 'Falabella', price: 699990, image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop', url: 'https://www.falabella.cl/', liked: false, category: 'Deportes' },
 ];
 
 // ─── BRANDS ─────────────────────────────────────────────────────────────────
@@ -241,7 +241,7 @@ export const BRANDS: Brand[] = [
     coverImage: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&h=300&fit=crop',
     description: 'Moda, tecnología y hogar al mejor precio.',
     filters: ['Ropa Mujer', 'Ropa Hombre', 'Tecnología', 'Hogar', 'Belleza'],
-    products: FALABELLA_PRODUCTS.map(p => ({ ...p, id: 'p' + p.id, brand: 'Paris' })),
+    products: FALABELLA_PRODUCTS.map(p => ({ ...p, id: 'p' + p.id, brand: 'Paris', url: 'https://www.paris.cl/' })),
     color: 'from-pink-500 to-pink-700',
   },
   {
@@ -252,7 +252,7 @@ export const BRANDS: Brand[] = [
     coverImage: 'https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=800&h=300&fit=crop',
     description: 'Lo mejor en moda, tecnología y más.',
     filters: ['Ropa', 'Tecnología', 'Juguetes', 'Hogar', 'Deportes'],
-    products: FALABELLA_PRODUCTS.map(p => ({ ...p, id: 'r' + p.id, brand: 'Ripley' })),
+    products: FALABELLA_PRODUCTS.map(p => ({ ...p, id: 'r' + p.id, brand: 'Ripley', url: 'https://www.ripley.cl/' })),
     color: 'from-purple-600 to-purple-800',
   },
 ];
