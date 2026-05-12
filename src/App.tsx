@@ -641,6 +641,66 @@ function HomeScreen({ onNavigate, following, onFollow }: {
   );
 }
 
+// ─── FRIEND WISH CARD (with Comprado button) ─────────────────────────────────
+function FriendWishCard({ product, onLike, onBuy }: {
+  product: Product;
+  onLike: (p: Product) => void;
+  onBuy: (p: Product) => void;
+}) {
+  const [liked, setLiked] = useState(false);
+  const [bought, setBought] = useState(false);
+
+  if (bought) {
+    return (
+      <div className="bg-gray-50 rounded-2xl border-2 border-green-200 overflow-hidden opacity-70">
+        <div className="relative">
+          <img src={product.image} alt={product.name} className="w-full h-36 object-cover grayscale" />
+          <div className="absolute inset-0 bg-green-600/20 flex items-center justify-center">
+            <span className="bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">✓ Comprado</span>
+          </div>
+        </div>
+        <div className="p-2.5">
+          <p className="text-xs text-gray-400 font-medium">{product.brand}</p>
+          <p className="text-xs font-semibold text-gray-500 leading-tight line-clamp-2">{product.name}</p>
+          <p className="text-sm font-bold text-gray-400 mt-0.5">{fmt(product.price)}</p>
+          <button onClick={() => setBought(false)}
+            className="w-full mt-2 bg-gray-200 text-gray-500 text-xs py-1.5 rounded-lg font-medium">
+            Deshacer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="relative">
+        <img src={product.image} alt={product.name} className="w-full h-36 object-cover" />
+        <button
+          onClick={() => { setLiked(v => !v); onLike({ ...product, liked: !liked }); }}
+          className={`absolute top-2 right-2 p-1.5 rounded-full shadow ${liked ? 'bg-red-500 text-white' : 'bg-white text-gray-400'}`}>
+          <Heart size={14} fill={liked ? 'white' : 'none'} />
+        </button>
+      </div>
+      <div className="p-2.5">
+        <p className="text-xs text-purple-600 font-medium truncate">{product.brand}</p>
+        <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2">{product.name}</p>
+        <p className="text-sm font-bold text-gray-900 mt-0.5">{fmt(product.price)}</p>
+        <div className="flex gap-1.5 mt-2">
+          <button onClick={() => onBuy(product)}
+            className="flex-1 bg-purple-600 text-white text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
+            <ExternalLink size={11} /> Comprar
+          </button>
+          <button onClick={() => setBought(true)}
+            className="flex-1 bg-green-50 border border-green-200 text-green-700 text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
+            <Check size={11} /> Comprado
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── FRIEND PROFILE VIEW ─────────────────────────────────────────────────────
 function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, onLike }: {
   friend: UserType;
@@ -852,28 +912,16 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
         </div>
       </div>
 
-      {/* ── Wishes tab (card list like own profile) ── */}
+      {/* ── Wishes tab — 2-col grid with ProductCard + Comprado ── */}
       {tab === 'wishes' && (
-        <div className="space-y-3 pt-3">
+        <div className="grid grid-cols-2 gap-3 pt-3">
           {friendWishes.map(p => (
-            <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex">
-              <div className="flex-shrink-0 w-24 h-24 bg-gray-50 overflow-hidden">
-                <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1 p-3 min-w-0">
-                <p className="text-xs text-purple-600 font-medium capitalize truncate">{p.brand}</p>
-                <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">{p.name}</p>
-                <p className="text-base font-bold text-gray-900 mt-0.5">{fmt(p.price)}</p>
-              </div>
-              <div className="flex flex-col items-center justify-center p-2 gap-2">
-                <button onClick={() => onLike(p)} className="text-gray-300 hover:text-red-400 transition">
-                  <Heart size={18} />
-                </button>
-                <button onClick={() => onBuy(p)} className="text-gray-300 hover:text-purple-500 transition">
-                  <ExternalLink size={16} />
-                </button>
-              </div>
-            </div>
+            <FriendWishCard
+              key={p.id}
+              product={p}
+              onLike={onLike}
+              onBuy={onBuy}
+            />
           ))}
         </div>
       )}
@@ -1160,6 +1208,16 @@ function DiscoverScreen() {
 }
 
 // ─── SEARCH FRIENDS SCREEN ───────────────────────────────────────────────────
+// Deterministic "mutual friends" helpers (no randomness — stable across renders)
+const MY_FRIEND_IDS = new Set(FRIENDS.filter(f => f.following).map(f => f.id));
+
+function getMutualFriends(target: UserType): UserType[] {
+  // Use target's friendsCount mod to pick stable mutual friends from my list
+  const myFriends = FRIENDS.filter(f => f.following && f.id !== target.id);
+  const count = Math.max(1, (target.friendsCount % 3) + 1);
+  return myFriends.slice(0, Math.min(count, 2));
+}
+
 function SearchFriendsScreen({ onNavigate, following, onFollow }: {
   onNavigate: (screen: Screen) => void;
   following: Set<string>;
@@ -1168,19 +1226,13 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
   const [query, setQuery] = useState('');
   const [selectedFriend, setSelectedFriend] = useState<UserType | null>(null);
   const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
-  const [friends, setFriends] = useState<Set<string>>(new Set(FRIENDS.filter(f => f.following).map(f => f.id)));
+  const [myFriends, setMyFriends] = useState<Set<string>>(new Set(FRIENDS.filter(f => f.following).map(f => f.id)));
   const [toast, setToast] = useState('');
   const [incomingRequests, setIncomingRequests] = useState<string[]>(
-    // Simulate 2 incoming requests from random non-following friends
-    FRIENDS.filter(f => !f.following).slice(0, 2).map(f => f.id)
+    FRIENDS.filter(f => !f.following).slice(2, 4).map(f => f.id)
   );
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
-
-  const mutualFriends = (f: UserType) => {
-    // Simulate mutual friends count based on friend's friendsCount
-    return Math.floor(f.friendsCount * 0.15 + 1);
-  };
 
   const sendRequest = (id: string) => {
     setPendingRequests(prev => new Set([...prev, id]));
@@ -1190,14 +1242,16 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
 
   const acceptRequest = (id: string) => {
     setIncomingRequests(prev => prev.filter(r => r !== id));
-    setFriends(prev => new Set([...prev, id]));
+    setMyFriends(prev => new Set([...prev, id]));
     onFollow(id);
     showToast('¡Ahora son amigos! 🎉');
   };
 
+  // Show only non-friends as suggestions; filter by query
+  const possibleFriends = FRIENDS.filter(f => !myFriends.has(f.id));
   const results = query.length > 1
-    ? FRIENDS.filter(f => `${f.name} ${f.lastName}`.toLowerCase().includes(query.toLowerCase())).slice(0, 20)
-    : FRIENDS.slice(0, 30);
+    ? FRIENDS.filter(f => `${f.name} ${f.lastName}`.toLowerCase().includes(query.toLowerCase()) && !myFriends.has(f.id)).slice(0, 20)
+    : possibleFriends.slice(0, 25);
 
   if (selectedFriend) {
     return (
@@ -1221,7 +1275,7 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           autoFocus value={query} onChange={e => setQuery(e.target.value)}
-          placeholder="Buscar por nombre..."
+          placeholder="Buscar personas..."
           className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
         />
       </div>
@@ -1229,26 +1283,33 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
       {/* Incoming friend requests */}
       {!query && incomingRequests.length > 0 && (
         <div className="mb-4">
-          <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">Solicitudes recibidas</p>
+          <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">Solicitudes recibidas ({incomingRequests.length})</p>
           <div className="space-y-2">
             {incomingRequests.map(id => {
               const f = FRIENDS.find(fr => fr.id === id);
               if (!f) return null;
+              const mutuals = getMutualFriends(f);
               return (
                 <div key={id} className="bg-purple-50 border border-purple-100 rounded-2xl p-3 flex items-center gap-3">
                   <button onClick={() => setSelectedFriend(f)}><Avatar src={f.avatar} size={48} /></button>
-                  <button onClick={() => setSelectedFriend(f)} className="flex-1 text-left">
+                  <button onClick={() => setSelectedFriend(f)} className="flex-1 text-left min-w-0">
                     <p className="font-semibold text-gray-800 text-sm">{f.name} {f.lastName}</p>
-                    <p className="text-xs text-gray-500">{mutualFriends(f)} amigos en común</p>
+                    <p className="text-xs text-gray-500">{mutuals.length} amigo{mutuals.length !== 1 ? 's' : ''} en común</p>
+                    {mutuals.length > 0 && (
+                      <div className="flex items-center gap-1 mt-1">
+                        {mutuals.map(m => <img key={m.id} src={m.avatar} alt={m.name} className="w-4 h-4 rounded-full border border-white" />)}
+                        <span className="text-[10px] text-gray-400">{mutuals.map(m => m.name).join(' y ')}</span>
+                      </div>
+                    )}
                   </button>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-shrink-0">
                     <button onClick={() => acceptRequest(id)}
                       className="bg-purple-600 text-white text-xs px-3 py-1.5 rounded-xl font-semibold">
                       Aceptar
                     </button>
                     <button onClick={() => setIncomingRequests(prev => prev.filter(r => r !== id))}
-                      className="bg-gray-100 text-gray-600 text-xs px-2.5 py-1.5 rounded-xl font-semibold">
-                      <X size={14} />
+                      className="bg-gray-100 text-gray-600 text-xs px-2 py-1.5 rounded-xl">
+                      <X size={13} />
                     </button>
                   </div>
                 </div>
@@ -1258,33 +1319,49 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
         </div>
       )}
 
+      {/* Possible friends list */}
       {!query && <p className="text-xs text-gray-400 mb-3 font-semibold uppercase tracking-wide">Personas que quizás conoces</p>}
       <div className="space-y-2">
-        {results.map(f => (
-          <div key={f.id} className="bg-white rounded-2xl p-3 flex items-center gap-3 shadow-sm border border-gray-100">
-            <button onClick={() => setSelectedFriend(f)}>
-              <Avatar src={f.avatar} size={48} />
-            </button>
-            <button onClick={() => setSelectedFriend(f)} className="flex-1 text-left min-w-0">
-              <p className="font-semibold text-gray-800 text-sm">{f.name} {f.lastName}</p>
-              <p className="text-xs text-gray-400">
-                {friends.has(f.id)
-                  ? '✓ Amigos'
-                  : `${mutualFriends(f)} amigos en común`}
-              </p>
-            </button>
-            {friends.has(f.id) ? (
-              <span className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-xl font-semibold">Amigos ✓</span>
-            ) : pendingRequests.has(f.id) ? (
-              <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1.5 rounded-xl font-semibold">Pendiente</span>
-            ) : (
-              <button onClick={() => sendRequest(f.id)}
-                className="bg-purple-600 text-white text-sm px-3 py-1.5 rounded-xl font-semibold transition">
-                Seguir
+        {results.map(f => {
+          const mutuals = getMutualFriends(f);
+          const mutualCount = mutuals.length;
+          return (
+            <div key={f.id} className="bg-white rounded-2xl p-3 flex items-center gap-3 shadow-sm border border-gray-100">
+              <button onClick={() => setSelectedFriend(f)}>
+                <Avatar src={f.avatar} size={50} />
               </button>
-            )}
-          </div>
-        ))}
+              <button onClick={() => setSelectedFriend(f)} className="flex-1 text-left min-w-0">
+                <p className="font-semibold text-gray-800 text-sm">{f.name} {f.lastName}</p>
+                {/* Mutual friends row */}
+                {mutualCount > 0 && (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex -space-x-1">
+                      {mutuals.map(m => (
+                        <img key={m.id} src={m.avatar} alt={m.name}
+                          className="w-4 h-4 rounded-full border border-white object-cover" />
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-gray-400 truncate">
+                      {mutuals.map(m => m.name).join(' y ')} {mutualCount === 1 ? 'también te sigue' : 'también te siguen'}
+                    </p>
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-300 mt-0.5">{mutualCount} amigo{mutualCount !== 1 ? 's' : ''} en común</p>
+              </button>
+              {pendingRequests.has(f.id) ? (
+                <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1.5 rounded-xl font-semibold flex-shrink-0">Pendiente</span>
+              ) : (
+                <button onClick={() => sendRequest(f.id)}
+                  className="bg-purple-600 text-white text-sm px-3 py-1.5 rounded-xl font-semibold flex-shrink-0 transition hover:bg-purple-700">
+                  Seguir
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {results.length === 0 && query && (
+          <p className="text-center text-gray-400 text-sm py-10">No se encontraron personas</p>
+        )}
       </div>
       {toast && <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm z-50">{toast}</div>}
     </div>
@@ -1948,16 +2025,92 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-2 px-4 pb-4">
+        <div className="flex gap-2 px-4 pb-2">
           <button onClick={() => setEditMode(v => !v)}
             className="flex-1 border border-gray-300 text-gray-800 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-50 transition">
             {editMode ? 'Cancelar' : 'Editar perfil'}
           </button>
-          <button onClick={() => onNavigate('messages')}
-            className="flex-1 border border-gray-300 text-gray-800 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-50 transition">
-            Compartir
+          <button onClick={() => setShowEventForm(v => !v)}
+            className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition border flex items-center justify-center gap-1 ${showEventForm ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300 text-gray-800 hover:bg-gray-50'}`}>
+            <Calendar size={13} /> Crear evento
           </button>
         </div>
+
+        {/* Event creation form */}
+        {showEventForm && (
+          <div className="mx-4 mb-3 bg-indigo-50 border border-indigo-200 rounded-2xl p-4">
+            <p className="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2">
+              <Calendar size={15} className="text-indigo-500" /> Nuevo Evento
+            </p>
+            <input value={eventTitle} onChange={e => setEventTitle(e.target.value)}
+              placeholder="Ej: Mi cumpleaños 🎂"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-2 focus:outline-none focus:border-indigo-400 bg-white" />
+            <div className="flex gap-2 mb-2">
+              <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 bg-white" />
+              <input value={eventLocation} onChange={e => setEventLocation(e.target.value)}
+                placeholder="Lugar"
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 bg-white" />
+            </div>
+            {/* Select friends to invite */}
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-gray-500 mb-2">Invitar amigos:</p>
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                {FRIENDS.filter(f => f.following).slice(0, 12).map(f => {
+                  const selected = eventLinkedWishes.includes('invite_' + f.id);
+                  return (
+                    <button key={f.id} onClick={() => setEventLinkedWishes(prev =>
+                      selected ? prev.filter(x => x !== 'invite_' + f.id) : [...prev, 'invite_' + f.id]
+                    )}
+                      className={`flex-shrink-0 flex flex-col items-center gap-1 p-1 rounded-xl transition ${selected ? 'ring-2 ring-indigo-500 bg-indigo-50' : ''}`}>
+                      <div className="relative">
+                        <img src={f.avatar} alt={f.name} className="w-10 h-10 rounded-full object-cover" />
+                        {selected && <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-600 rounded-full text-white text-[9px] flex items-center justify-center">✓</span>}
+                      </div>
+                      <span className="text-[10px] text-gray-600 w-10 truncate text-center">{f.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Link wishes */}
+            {wishes.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Vincular deseos al evento:</p>
+                <div className="space-y-1 max-h-28 overflow-y-auto">
+                  {wishes.slice(0, 6).map(w => {
+                    const sel = eventLinkedWishes.includes(w.id);
+                    return (
+                      <label key={w.id} className="flex items-center gap-2 cursor-pointer text-xs">
+                        <input type="checkbox" checked={sel}
+                          onChange={e => setEventLinkedWishes(prev => e.target.checked ? [...prev, w.id] : prev.filter(id => id !== w.id))}
+                          className="accent-indigo-600 w-3.5 h-3.5" />
+                        <img src={w.image} alt="" className="w-6 h-6 rounded object-cover" />
+                        <span className="flex-1 truncate text-gray-700">{w.name}</span>
+                        <span className="text-gray-400 flex-shrink-0">{w.price > 0 ? fmt(w.price) : ''}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => {
+                if (!eventTitle.trim() || !eventDate) return;
+                const inviteCount = eventLinkedWishes.filter(x => x.startsWith('invite_')).length;
+                const linked = wishes.filter(w => eventLinkedWishes.includes(w.id));
+                setMyEvents(prev => [...prev, { id: 'ev_' + Date.now(), title: eventTitle.trim(), date: eventDate, location: eventLocation.trim(), wishes: linked }]);
+                setShowEventForm(false); setEventTitle(''); setEventDate(''); setEventLocation(''); setEventLinkedWishes([]);
+                showToast(`🎉 Evento creado${inviteCount > 0 ? ` · ${inviteCount} invitaciones enviadas` : ''}`);
+              }} disabled={!eventTitle.trim() || !eventDate}
+                className="flex-1 bg-indigo-600 text-white py-2 rounded-xl text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-1">
+                <Calendar size={14} /> Crear y enviar invitaciones
+              </button>
+              <button onClick={() => setShowEventForm(false)}
+                className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-500">✕</button>
+            </div>
+          </div>
+        )}
 
         {/* Highlights (lists as stories) */}
         {lists.length > 0 && (
@@ -2080,80 +2233,26 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
         </div>
       )}
 
-      {/* ── Event Creation ── */}
-      {tab === 'funds' && (
-        <div className="mt-4">
-          {/* Create event button */}
-          {!showEventForm ? (
-            <button onClick={() => setShowEventForm(true)}
-              className="w-full border-2 border-dashed border-indigo-300 rounded-2xl p-4 flex items-center gap-3 text-indigo-600 hover:bg-indigo-50 transition mb-4">
-              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <Calendar size={20} className="text-indigo-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold text-sm">Crear invitación a evento</p>
-                <p className="text-xs text-gray-400">Vincula tus deseos a un evento especial</p>
-              </div>
-            </button>
-          ) : (
-            <div className="bg-white rounded-2xl border-2 border-indigo-300 p-4 shadow-sm mb-4">
-              <p className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><Calendar size={16} className="text-indigo-500" /> Nuevo Evento</p>
-              <input value={eventTitle} onChange={e => setEventTitle(e.target.value)}
-                placeholder="Título del evento (ej: Mi cumpleaños 🎂)"
-                className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-400 transition mb-2" />
-              <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-400 transition mb-2" />
-              <input value={eventLocation} onChange={e => setEventLocation(e.target.value)}
-                placeholder="Lugar (ej: Santiago, Chile)"
-                className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-400 transition mb-3" />
-              {wishes.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs font-semibold text-gray-500 mb-2">Vincular deseos:</p>
-                  <div className="flex flex-col gap-1.5">
-                    {wishes.slice(0, 5).map(w => (
-                      <label key={w.id} className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={eventLinkedWishes.includes(w.id)}
-                          onChange={e => setEventLinkedWishes(prev => e.target.checked ? [...prev, w.id] : prev.filter(id => id !== w.id))}
-                          className="accent-indigo-600" />
-                        <span className="text-xs text-gray-700 truncate">{w.name}</span>
-                        <span className="text-xs text-gray-400 ml-auto">{w.price > 0 ? fmt(w.price) : ''}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <button onClick={() => {
-                  if (!eventTitle.trim() || !eventDate) return;
-                  const linked = wishes.filter(w => eventLinkedWishes.includes(w.id));
-                  setMyEvents(prev => [...prev, { id: 'ev_' + Date.now(), title: eventTitle.trim(), date: eventDate, location: eventLocation.trim(), wishes: linked }]);
-                  setShowEventForm(false); setEventTitle(''); setEventDate(''); setEventLocation(''); setEventLinkedWishes([]);
-                  showToast('¡Evento creado! 🎉');
-                }} disabled={!eventTitle.trim() || !eventDate}
-                  className="flex-1 bg-indigo-600 text-white py-2 rounded-xl text-sm font-semibold disabled:opacity-40">
-                  Crear evento 🎉
-                </button>
-                <button onClick={() => setShowEventForm(false)} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm">Cancelar</button>
-              </div>
-            </div>
-          )}
-          {/* My events list */}
+      {/* ── My created events (shown in funds tab) ── */}
+      {tab === 'funds' && myEvents.length > 0 && (
+        <div className="mt-4 mb-2">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Mis eventos</p>
           {myEvents.map(ev => (
             <div key={ev.id} className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-3">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">🎉</span>
                 <div className="flex-1">
-                  <p className="font-bold text-gray-800">{ev.title}</p>
-                  <p className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={11} />
+                  <p className="font-bold text-gray-800 text-sm">{ev.title}</p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={10} />
                     {new Date(ev.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
-                  {ev.location && <p className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={11} /> {ev.location}</p>}
+                  {ev.location && <p className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={10} /> {ev.location}</p>}
                   {ev.wishes.length > 0 && (
-                    <div className="mt-2 flex gap-2 overflow-x-auto">
+                    <div className="mt-2 flex gap-2 overflow-x-auto hide-scrollbar">
                       {ev.wishes.map(w => (
                         <div key={w.id} className="flex-shrink-0 bg-white rounded-lg p-1.5 text-xs text-gray-700 border border-indigo-100 flex items-center gap-1">
-                          <img src={w.image} alt="" className="w-6 h-6 rounded object-cover" />
-                          <span className="truncate max-w-[80px]">{w.name}</span>
+                          <img src={w.image} alt="" className="w-5 h-5 rounded object-cover" />
+                          <span className="truncate max-w-[70px]">{w.name}</span>
                         </div>
                       ))}
                     </div>
