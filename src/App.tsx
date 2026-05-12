@@ -238,6 +238,8 @@ function HomeScreen({ onNavigate, following, onFollow }: {
   const [addToListProduct, setAddToListProduct] = useState<Product | null>(null);
   const [myWishes, setMyWishes] = useState<Product[]>(MY_WISHES);
   const [toast, setToast] = useState('');
+  const [forwardingProduct, setForwardingProduct] = useState<Product | null>(null);
+  const [forwardSentTo, setForwardSentTo] = useState<string | null>(null);
 
   const sortedFriends = sortByBirthdayProximity(FRIENDS);
   const todayBirthdays = sortedFriends.filter(f => isTodayBirthday(f.birthday));
@@ -532,12 +534,16 @@ function HomeScreen({ onNavigate, following, onFollow }: {
                     <p className="text-lg font-bold text-gray-900">{fmt(item.product.price)}</p>
                     <div className="flex gap-2 mt-3">
                       <button onClick={() => handleLike(item.product!)}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition border ${likedItems.has(item.product.id) ? 'bg-red-50 text-red-500 border-red-200' : 'border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-500'}`}>
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition border ${likedItems.has(item.product.id) ? 'bg-red-50 text-red-500 border-red-200' : 'border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-500'}`}>
                         <Heart size={15} fill={likedItems.has(item.product.id) ? 'currentColor' : 'none'} /> Lo Quiero
                       </button>
                       <button onClick={() => handleBuy(item.product!)}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-medium">
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600 text-white text-sm font-medium">
                         <ExternalLink size={15} /> Comprar
+                      </button>
+                      <button onClick={() => setForwardingProduct(item.product!)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:border-purple-300 hover:text-purple-600 transition">
+                        <Send size={15} />
                       </button>
                     </div>
                   </div>
@@ -597,6 +603,40 @@ function HomeScreen({ onNavigate, following, onFollow }: {
           onClose={() => setAddToListProduct(null)}
         />
       )}
+
+      {/* Forward product modal */}
+      {forwardingProduct && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => { setForwardingProduct(null); setForwardSentTo(null); }}>
+          <div className="bg-white rounded-t-3xl w-full max-w-lg p-5" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+            <h3 className="font-bold text-gray-800 mb-1">Reenviar regalo</h3>
+            {/* Mini product preview */}
+            <div className="flex gap-3 items-center bg-gray-50 rounded-xl p-2 mb-4">
+              <img src={forwardingProduct.image} alt={forwardingProduct.name} className="w-12 h-12 rounded-lg object-cover" />
+              <div className="min-w-0">
+                <p className="text-xs text-purple-600 font-medium">{forwardingProduct.brand}</p>
+                <p className="text-sm font-semibold text-gray-800 truncate">{forwardingProduct.name}</p>
+                <p className="text-sm font-bold text-gray-900">{fmt(forwardingProduct.price)}</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 font-semibold uppercase mb-2">Enviar a:</p>
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {CONVERSATIONS.map(conv => (
+                <button key={conv.id} onClick={() => {
+                  setForwardSentTo(conv.user.name);
+                  setTimeout(() => { setForwardingProduct(null); setForwardSentTo(null); showToast(`🎁 Reenviado a ${conv.user.name}`); }, 800);
+                }}
+                  className={`w-full flex items-center gap-3 rounded-2xl p-3 border transition text-left ${forwardSentTo === conv.user.name ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-100 hover:bg-purple-50'}`}>
+                  <Avatar src={conv.user.avatar} size={44} />
+                  <p className="font-semibold text-gray-800">{conv.user.name} {conv.user.lastName}</p>
+                  {forwardSentTo === conv.user.name && <span className="ml-auto text-purple-600 font-bold text-sm">✓ Enviado</span>}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setForwardingProduct(null)} className="w-full mt-3 text-gray-500 text-sm py-2">Cancelar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -615,16 +655,27 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
   const [contributingFund, setContributingFund] = useState<GroupFund | null>(null);
   const [contributed, setContributed] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState('');
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteTitle, setInviteTitle] = useState('');
+  const [inviteDate, setInviteDate] = useState('');
+  const [inviteLocation, setInviteLocation] = useState('');
+  const [inviteLinked, setInviteLinked] = useState<string[]>([]);
+  const [inviteSent, setInviteSent] = useState(false);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
-  // Mock wishes/funds for the friend
+  // Simulated data for this friend
   const friendWishes = SAMSUNG_PRODUCTS.slice(0, 6).map((p, i) => ({ ...p, id: `fw${friend.id}_${i}` }));
   const friendFunds: GroupFund[] = MY_GROUP_FUNDS.slice(0, 2).map((f, i) => ({
     ...f, id: `ff${friend.id}_${i}`, isOwner: false,
   }));
+  const friendLists = [
+    { id: 'fl1', name: 'Navidad', emoji: '🎄' },
+    { id: 'fl2', name: 'Cumple', emoji: '🎂' },
+    { id: 'fl3', name: 'Viajes', emoji: '✈️' },
+  ];
 
-  // Contribute modal
+  // Contribute flow
   if (contributingFund) {
     const pct = Math.round((contributingFund.currentAmount / contributingFund.targetAmount) * 100);
     return (
@@ -654,19 +705,17 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
               ))}
             </div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-gray-500">$</span>
+              <span className="text-gray-400 font-bold">$</span>
               <input value={contributeAmount} onChange={e => setContributeAmount(e.target.value.replace(/\D/g,''))}
                 placeholder="Otro monto"
                 className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-400" />
             </div>
-            <button
-              onClick={() => {
-                if (!contributeAmount) return;
-                setContributed(prev => new Set([...prev, contributingFund.id]));
-                showToast(`¡Aporte de ${fmt(Number(contributeAmount))} enviado! 🎁`);
-                setContributingFund(null); setContributeAmount('');
-              }}
-              disabled={!contributeAmount}
+            <button onClick={() => {
+              if (!contributeAmount) return;
+              setContributed(prev => new Set([...prev, contributingFund.id]));
+              showToast(`¡Aporte de ${fmt(Number(contributeAmount))} enviado! 🎁`);
+              setContributingFund(null); setContributeAmount('');
+            }} disabled={!contributeAmount}
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-semibold disabled:opacity-40 flex items-center justify-center gap-2">
               <Heart size={16} fill="white" /> Aportar {contributeAmount ? fmt(Number(contributeAmount)) : ''}
             </button>
@@ -679,100 +728,187 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="w-20 h-20 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
-          <div className="w-full h-full rounded-full overflow-hidden bg-white p-0.5">
-            <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
+      {/* ── Instagram-style header (same as own profile) ── */}
+      <div className="bg-white -mx-4 px-4 pb-0 mb-0">
+        {/* Top row: avatar + stats */}
+        <div className="flex items-center gap-4 pt-2 pb-3">
+          <div className="w-20 h-20 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex-shrink-0">
+            <div className="w-full h-full rounded-full overflow-hidden bg-white p-0.5">
+              <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
+            </div>
+          </div>
+          {/* 4 stats */}
+          <div className="flex-1 grid grid-cols-4 gap-1 text-center">
+            {[
+              [String(friend.friendsCount), 'amigos'],
+              [String(friend.followersCount), 'seguidores'],
+              [String(friendWishes.length), 'deseos'],
+              [String(friendFunds.length), 'fondos'],
+            ].map(([n, label]) => (
+              <div key={label}>
+                <p className="font-bold text-gray-900 text-base leading-tight">{n}</p>
+                <p className="text-[10px] text-gray-500 leading-tight">{label}</p>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-bold text-gray-800">{friend.name} {friend.lastName}</h2>
-          <p className="text-xs text-gray-400">@{friend.name.toLowerCase().replace(/\s/g,'_')}</p>
-          {friend.bio && <p className="text-xs text-gray-500 mt-0.5">{friend.bio}</p>}
-          <p className="text-xs text-purple-500 mt-0.5 flex items-center gap-1"><Cake size={11} /> {getBirthdayLabel(friend.birthday)}</p>
+
+        {/* Name + username + bio + birthday */}
+        <div className="pb-3">
+          <p className="font-bold text-gray-900 text-sm">{friend.name} {friend.lastName}</p>
+          <p className="text-xs text-gray-400">@{friend.name.toLowerCase().replace(/\s+/g,'_')}{friend.lastName ? friend.lastName.toLowerCase().replace(/\s+/g,'') : ''}</p>
+          {friend.bio && <p className="text-xs text-gray-600 mt-0.5">{friend.bio}</p>}
+          <p className="text-xs text-purple-500 mt-0.5 flex items-center gap-1"><Cake size={10} /> {getBirthdayLabel(friend.birthday)}</p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 pb-3">
+          <button onClick={onFollow}
+            className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition border ${isFollowing ? 'bg-gray-50 text-gray-700 border-gray-300' : 'bg-purple-600 text-white border-purple-600'}`}>
+            {isFollowing ? '✓ Siguiendo' : '+ Seguir'}
+          </button>
+          <button onClick={onMessage}
+            className="flex-1 py-1.5 rounded-lg bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 flex items-center justify-center gap-1">
+            <MessageCircle size={13} /> Mensaje
+          </button>
+          <button onClick={() => setShowInviteForm(v => !v)}
+            className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition flex items-center justify-center gap-1 ${showInviteForm ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-gray-50 text-gray-700 border-gray-300'}`}>
+            <Calendar size={13} /> Invitar
+          </button>
+        </div>
+
+        {/* Invite to event form */}
+        {showInviteForm && !inviteSent && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-3">
+            <p className="font-semibold text-gray-800 text-sm mb-2 flex items-center gap-1"><Calendar size={14} className="text-indigo-500" /> Invitar a evento</p>
+            <input value={inviteTitle} onChange={e => setInviteTitle(e.target.value)}
+              placeholder="Nombre del evento..."
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-2 focus:outline-none focus:border-indigo-400" />
+            <input type="date" value={inviteDate} onChange={e => setInviteDate(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-2 focus:outline-none focus:border-indigo-400" />
+            <input value={inviteLocation} onChange={e => setInviteLocation(e.target.value)}
+              placeholder="Lugar (opcional)"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-3 focus:outline-none focus:border-indigo-400" />
+            {/* Link wishes */}
+            {friendWishes.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs text-gray-500 font-medium mb-1">Vincular regalos sugeridos:</p>
+                <div className="space-y-1">
+                  {friendWishes.slice(0, 4).map(w => (
+                    <label key={w.id} className="flex items-center gap-2 cursor-pointer text-xs text-gray-700">
+                      <input type="checkbox" checked={inviteLinked.includes(w.id)}
+                        onChange={e => setInviteLinked(prev => e.target.checked ? [...prev, w.id] : prev.filter(id => id !== w.id))}
+                        className="accent-indigo-600" />
+                      <img src={w.image} alt="" className="w-5 h-5 rounded object-cover" />
+                      <span className="truncate flex-1">{w.name}</span>
+                      <span className="text-gray-400 flex-shrink-0">{fmt(w.price)}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => {
+                if (!inviteTitle.trim() || !inviteDate) return;
+                setInviteSent(true);
+                showToast(`🎉 Invitación enviada a ${friend.name}`);
+                setTimeout(() => { setShowInviteForm(false); setInviteSent(false); setInviteTitle(''); setInviteDate(''); setInviteLocation(''); setInviteLinked([]); }, 2000);
+              }} disabled={!inviteTitle.trim() || !inviteDate}
+                className="flex-1 bg-indigo-600 text-white py-2 rounded-xl text-sm font-semibold disabled:opacity-40">
+                Enviar invitación 🎉
+              </button>
+              <button onClick={() => setShowInviteForm(false)} className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-500">✕</button>
+            </div>
+          </div>
+        )}
+        {inviteSent && (
+          <div className="bg-green-50 border border-green-200 text-green-700 text-sm text-center py-2 rounded-xl mb-3 font-medium">
+            ✓ ¡Invitación enviada a {friend.name}!
+          </div>
+        )}
+
+        {/* Story highlights (lists) */}
+        <div className="flex gap-4 pb-3 overflow-x-auto hide-scrollbar">
+          {friendLists.map(list => (
+            <div key={list.id} className="flex flex-col items-center gap-1 flex-shrink-0">
+              <div className="w-14 h-14 rounded-full border-2 border-gray-200 flex items-center justify-center bg-gray-50 text-2xl">
+                {list.emoji}
+              </div>
+              <span className="text-[10px] text-gray-600 w-14 text-center truncate">{list.name}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Tab bar */}
+        <div className="flex border-t border-gray-200">
+          <button onClick={() => setTab('wishes')}
+            className={`flex-1 py-2.5 text-lg transition border-t-2 ${tab === 'wishes' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400'}`}>
+            ⊞
+          </button>
+          <button onClick={() => setTab('funds')}
+            className={`flex-1 py-2.5 text-lg transition border-t-2 ${tab === 'funds' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400'}`}>
+            💰
+          </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="flex gap-2 mb-3">
-        {[
-          [String(friend.friendsCount), 'Amigos'],
-          [String(friend.followersCount), 'Seguidores'],
-          [String(friend.listsCount), 'Listas'],
-        ].map(([n, label]) => (
-          <div key={label} className="flex-1 text-center bg-white rounded-xl py-2.5 shadow-sm border border-gray-100">
-            <p className="font-bold text-gray-800 text-sm">{n}</p>
-            <p className="text-xs text-gray-500">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex gap-2 mb-4">
-        <button onClick={onFollow}
-          className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition ${isFollowing ? 'bg-gray-100 text-gray-700' : 'bg-purple-600 text-white'}`}>
-          {isFollowing ? '✓ Siguiendo' : '+ Seguir'}
-        </button>
-        <button onClick={onMessage} className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm flex items-center justify-center gap-1">
-          <MessageCircle size={15} /> Mensaje
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-4">
-        <button onClick={() => setTab('wishes')}
-          className={`flex-1 py-2.5 text-sm font-semibold transition border-b-2 ${tab === 'wishes' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400'}`}>
-          ⊞ Deseos
-        </button>
-        <button onClick={() => setTab('funds')}
-          className={`flex-1 py-2.5 text-sm font-semibold transition border-b-2 ${tab === 'funds' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400'}`}>
-          💰 Fondos
-        </button>
-      </div>
-
-      {/* Wishes tab */}
+      {/* ── Wishes tab (card list like own profile) ── */}
       {tab === 'wishes' && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3 pt-3">
           {friendWishes.map(p => (
-            <ProductCard key={p.id} product={p} onLike={onLike} onBuy={onBuy} />
+            <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex">
+              <div className="flex-shrink-0 w-24 h-24 bg-gray-50 overflow-hidden">
+                <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 p-3 min-w-0">
+                <p className="text-xs text-purple-600 font-medium capitalize truncate">{p.brand}</p>
+                <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">{p.name}</p>
+                <p className="text-base font-bold text-gray-900 mt-0.5">{fmt(p.price)}</p>
+              </div>
+              <div className="flex flex-col items-center justify-center p-2 gap-2">
+                <button onClick={() => onLike(p)} className="text-gray-300 hover:text-red-400 transition">
+                  <Heart size={18} />
+                </button>
+                <button onClick={() => onBuy(p)} className="text-gray-300 hover:text-purple-500 transition">
+                  <ExternalLink size={16} />
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Funds tab */}
+      {/* ── Funds tab ── */}
       {tab === 'funds' && (
-        <div className="space-y-3">
+        <div className="space-y-3 pt-3">
           {friendFunds.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-8">No hay fondos activos</p>
-          ) : (
-            friendFunds.map(fund => {
-              const pct = Math.round((fund.currentAmount / fund.targetAmount) * 100);
-              return (
-                <div key={fund.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <img src={fund.product.image} alt={fund.product.name} className="w-full h-32 object-cover" />
-                  <div className="p-4">
-                    <p className="font-bold text-gray-800 text-sm">{fund.name}</p>
-                    <p className="text-xs text-gray-500 mb-2">{fund.product.name}</p>
-                    <div className="h-2.5 bg-gray-100 rounded-full mb-1">
-                      <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-400 mb-3">
-                      <span>{fmt(fund.currentAmount)}</span><span>Meta {fmt(fund.targetAmount)}</span>
-                    </div>
-                    {contributed.has(fund.id) ? (
-                      <div className="w-full bg-green-50 text-green-600 py-2 rounded-xl text-sm font-semibold text-center">✓ ¡Ya aportaste!</div>
-                    ) : (
-                      <button onClick={() => setContributingFund(fund)}
-                        className="w-full bg-purple-600 text-white py-2 rounded-xl text-sm font-semibold">
-                        💜 Aportar al fondo
-                      </button>
-                    )}
+          ) : friendFunds.map(fund => {
+            const pct = Math.round((fund.currentAmount / fund.targetAmount) * 100);
+            return (
+              <div key={fund.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <img src={fund.product.image} alt={fund.product.name} className="w-full h-32 object-cover" />
+                <div className="p-4">
+                  <p className="font-bold text-gray-800 text-sm">{fund.name}</p>
+                  <p className="text-xs text-gray-500 mb-2">{fund.product.name}</p>
+                  <div className="h-2.5 bg-gray-100 rounded-full mb-1">
+                    <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
+                  <div className="flex justify-between text-xs text-gray-400 mb-3">
+                    <span>{fmt(fund.currentAmount)} recaudados</span><span>Meta {fmt(fund.targetAmount)}</span>
+                  </div>
+                  {contributed.has(fund.id) ? (
+                    <div className="w-full bg-green-50 text-green-600 py-2 rounded-xl text-sm font-semibold text-center">✓ ¡Ya aportaste!</div>
+                  ) : (
+                    <button onClick={() => setContributingFund(fund)}
+                      className="w-full bg-purple-600 text-white py-2 rounded-xl text-sm font-semibold">
+                      💜 Aportar al fondo
+                    </button>
+                  )}
                 </div>
-              );
-            })
-          )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -1770,9 +1906,10 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
           {/* Stats */}
           <div className="flex-1 flex justify-around">
             {[
+              ['87', 'amigos'],
+              ['165', 'seguidores'],
               [String(wishes.length), 'deseos'],
-              [String(lists.length), 'listas'],
-              [String(funds.length > 0 ? funds.length : 0), 'fondos'],
+              [String(funds.length), 'fondos'],
             ].map(([n, label]) => (
               <div key={label} className="text-center">
                 <p className="font-bold text-gray-900 text-lg leading-tight">{n}</p>
