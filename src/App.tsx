@@ -14,6 +14,27 @@ export type AppUser = {
   avatar: string; bio: string;
 };
 
+function mapSupabaseUser(
+  user: SupabaseUser,
+  profile?: { name?: string; username?: string; avatar?: string; bio?: string } | null
+): AppUser {
+  const email = user.email ?? '';
+  const meta = user.user_metadata ?? {};
+  const name = profile?.name ?? String(meta['name'] ?? email.split('@')[0]);
+  const username = profile?.username ?? String(meta['username'] ?? email.split('@')[0].toLowerCase().replace(/\s/g, '_'));
+  const avatar = profile?.avatar
+    ?? `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}&backgroundColor=7C3AED&textColor=ffffff`;
+  return {
+    id: user.id,
+    name,
+    username,
+    email,
+    passwordHash: '', // handled by Supabase
+    avatar,
+    bio: profile?.bio ?? '',
+  };
+}
+
 function getStoredUsers(): AppUser[] {
   try { return JSON.parse(localStorage.getItem('gl_users') ?? '[]'); } catch { return []; }
 }
@@ -69,6 +90,8 @@ import type {
   Screen, User as UserType, Product, Event, Brand,
   Conversation, Message, GroupFund,
 } from './types';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const fmt = (n: number) => `$${n.toLocaleString('es-CL')}`;
@@ -1363,6 +1386,10 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
       onUserUpdate(updated);
       const all = getStoredUsers().map(u => u.id === updated.id ? updated : u);
       saveStoredUsers(all);
+      // Sync to Supabase
+      if (isSupabaseConfigured && supabase) {
+        supabase.from('profiles').update({ avatar: newAvatar }).eq('id', updated.id).then(() => {});
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -1516,6 +1543,9 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
                 onUserUpdate(updated);
                 const all = getStoredUsers().map(u => u.id === updated.id ? updated : u);
                 saveStoredUsers(all);
+                if (isSupabaseConfigured && supabase) {
+                  supabase.from('profiles').update({ name: updated.name, bio: updated.bio }).eq('id', updated.id).then(() => {});
+                }
                 setEditMode(false);
               }} className="bg-purple-600 text-white text-xs px-4 py-1.5 rounded-lg font-semibold">Guardar</button>
             </div>
@@ -1789,45 +1819,81 @@ function AuthScreen({ onAuth }: { onAuth: (user: AppUser) => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(''); setLoading(true);
-    await new Promise(r => setTimeout(r, 700));
+    setError('');
 
-    if (mode === 'register') {
-      if (!name.trim() || !username.trim() || !email.trim() || !password) {
-        setError('Completa todos los campos'); setLoading(false); return;
+    if (mode === 'register' && (!name.trim() || !username.trim())) {
+      setError('Completa nombre y usuario.'); return;
+    }
+    if (!email.trim() || !password.trim()) {
+      setError('Completa todos los campos.'); return;
+    }
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.'); return;
+    }
+
+    setLoading(true);
+    try {
+      // ── Supabase auth (production) ────────────────────────────────────────
+      if (isSupabaseConfigured && supabase) {
+        if (mode === 'login') {
+          const { data, error: authErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (authErr) throw new Error(authErr.message === 'Invalid login credentials' ? 'Email o contraseña incorrectos.' : authErr.message);
+          if (!data.user) throw new Error('No se pudo iniciar sesión.');
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+          onAuth(mapSupabaseUser(data.user, profile));
+        } else {
+          // Check duplicate username
+          const { data: existing } = await supabase.from('profiles').select('id').eq('username', username.toLowerCase()).single();
+          if (existing) { setError('Ese usuario ya existe.'); return; }
+
+          const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}&backgroundColor=7C3AED&textColor=ffffff`;
+          const { data, error: authErr } = await supabase.auth.signUp({
+            email, password,
+            options: { data: { name: name.trim(), username: username.toLowerCase() } }
+          });
+          if (authErr) throw new Error(authErr.message);
+          if (!data.user) throw new Error('No se pudo crear la cuenta.');
+
+          // Upsert profile
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            name: name.trim(),
+            username: username.toLowerCase(),
+            avatar: avatarUrl,
+            bio: '',
+          });
+
+          onAuth(mapSupabaseUser(data.user, { name: name.trim(), username: username.toLowerCase(), avatar: avatarUrl, bio: '' }));
+        }
+        return;
       }
-      if (password.length < 6) {
-        setError('La contraseña debe tener al menos 6 caracteres'); setLoading(false); return;
+
+      // ── LocalStorage fallback (dev without Supabase) ──────────────────────
+      if (mode === 'login') {
+        const users = getStoredUsers();
+        const found = users.find(u => u.email === email && u.passwordHash === simpleHash(password));
+        if (!found) { setError('Email o contraseña incorrectos.'); return; }
+        setStoredCurrent(found);
+        onAuth(found);
+      } else {
+        const users = getStoredUsers();
+        if (users.find(u => u.email === email)) { setError('Ya existe una cuenta con ese email.'); return; }
+        if (users.find(u => u.username === username.toLowerCase())) { setError('Ese usuario ya existe.'); return; }
+        const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}&backgroundColor=7C3AED&textColor=ffffff`;
+        const newUser: AppUser = {
+          id: String(Date.now()),
+          name: name.trim(), username: username.toLowerCase(),
+          email, passwordHash: simpleHash(password),
+          avatar: avatarUrl, bio: '',
+        };
+        saveStoredUsers([...users, newUser]);
+        setStoredCurrent(newUser);
+        onAuth(newUser);
       }
-      const users = getStoredUsers();
-      if (users.find(u => u.email === email.toLowerCase())) {
-        setError('Ya existe una cuenta con ese correo'); setLoading(false); return;
-      }
-      if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
-        setError('Ese nombre de usuario ya está en uso'); setLoading(false); return;
-      }
-      const newUser: AppUser = {
-        id: 'u_' + Date.now(),
-        name: name.trim(),
-        username: username.trim().toLowerCase().replace(/\s/g, '_'),
-        email: email.toLowerCase(),
-        passwordHash: simpleHash(password),
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=7C3AED&textColor=ffffff&fontSize=40`,
-        bio: '',
-      };
-      saveStoredUsers([...users, newUser]);
-      setStoredCurrent(newUser);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error desconocido.');
+    } finally {
       setLoading(false);
-      onAuth(newUser);
-    } else {
-      const users = getStoredUsers();
-      const user = users.find(u => u.email === email.toLowerCase() && u.passwordHash === simpleHash(password));
-      if (!user) {
-        setError('Correo o contraseña incorrectos'); setLoading(false); return;
-      }
-      setStoredCurrent(user);
-      setLoading(false);
-      onAuth(user);
     }
   };
 
@@ -1893,9 +1959,41 @@ function AuthScreen({ onAuth }: { onAuth: (user: AppUser) => void }) {
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function App() {
   const [screen, setScreen] = useState<Screen>('home');
-  const [appUser, setAppUser] = useState<AppUser | null>(() => getStoredCurrent());
+  // When Supabase is configured, start null and load from session
+  // When not configured, load from localStorage
+  const [appUser, setAppUser] = useState<AppUser | null>(() =>
+    isSupabaseConfigured ? null : getStoredCurrent()
+  );
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
   const [following, setFollowing] = useState<Set<string>>(new Set(FRIENDS.filter(f => f.following).map(f => f.id)));
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Supabase session init
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    // Get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const { data: profile } = await supabase!.from('profiles').select('*').eq('id', session.user.id).single();
+        setAppUser(mapSupabaseUser(session.user, profile));
+      }
+      setAuthLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase!.from('profiles').select('*').eq('id', session.user.id).single();
+        setAppUser(mapSupabaseUser(session.user, profile));
+      } else if (event === 'SIGNED_OUT') {
+        setAppUser(null);
+      }
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const navigate = (s: Screen) => setScreen(s);
   const onFollow = (id: string) => setFollowing(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -1917,10 +2015,32 @@ function App() {
     return () => window.removeEventListener('click', handler);
   }, [showNotifications]);
 
-  const handleAuth = (user: AppUser) => { setAppUser(user); };
-  const handleLogout = () => { setStoredCurrent(null); setAppUser(null); setScreen('home'); };
+  const handleAuth = (user: AppUser) => {
+    setAppUser(user);
+    if (!isSupabaseConfigured) setStoredCurrent(user);
+  };
+  const handleLogout = async () => {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.auth.signOut();
+    } else {
+      setStoredCurrent(null);
+    }
+    setAppUser(null);
+    setScreen('home');
+  };
   const currentUser = appUser ?? { ...ME, name: 'Usuario', username: 'usuario', email: '', passwordHash: '', bio: '' };
 
+  // Show loading spinner while Supabase checks session
+  if (authLoading) return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center">
+          <Gift size={24} className="text-white" />
+        </div>
+        <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    </div>
+  );
   if (!appUser) return <AuthScreen onAuth={handleAuth} />;
 
   return (
