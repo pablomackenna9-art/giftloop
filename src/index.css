@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  background-color: #f8f7ff;
+  margin: 0;
+  padding: 0;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 4px;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
