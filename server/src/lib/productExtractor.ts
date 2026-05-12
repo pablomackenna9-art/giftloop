@@ -604,7 +604,7 @@ async function scrapeWithPuppeteer(url: string, store: StoreId, fallbackImage?: 
     // Anti-detection
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      (window as Record<string,unknown>).chrome = { runtime: {} };
+      (window as unknown as Record<string,unknown>).chrome = { runtime: {} };
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
     });
     await page.setUserAgent(BROWSER_UA);
