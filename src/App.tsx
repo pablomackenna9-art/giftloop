@@ -223,10 +223,12 @@ function AddToListModal({ product, myLists, onSelect, onClose }: {
 }
 
 // ─── HOME SCREEN ─────────────────────────────────────────────────────────────
-function HomeScreen({ onNavigate, following, onFollow }: {
+function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike }: {
   onNavigate: (screen: Screen, data?: unknown) => void;
   following: Set<string>;
   onFollow: (id: string) => void;
+  currentUserId?: string;
+  onFeedLike?: (p: Product) => void;
 }) {
   const [subView, setSubView] = useState<'feed' | 'wallet_review' | 'wallet_withdraw' | 'birthdays_all' | 'event_detail' | 'friend_profile' | 'brand_store'>('feed');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -250,13 +252,35 @@ function HomeScreen({ onNavigate, following, onFollow }: {
     setTimeout(() => setToast(''), 2500);
   };
 
-  const handleLike = (product: Product) => {
+  const handleLike = async (product: Product) => {
+    const alreadyLiked = likedItems.has(product.id);
     setLikedItems(prev => {
       const next = new Set(prev);
-      if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
+      alreadyLiked ? next.delete(product.id) : next.add(product.id);
       return next;
     });
-    setAddToListProduct(product);
+    if (!alreadyLiked) {
+      // Add to user's wishes
+      setMyWishes(prev => prev.find(p => p.id === product.id) ? prev : [{ ...product, liked: true }, ...prev]);
+      showToast('⭐ Guardado en tus Deseos');
+      // Propagate up to App so ProfileScreen picks it up
+      onFeedLike?.({ ...product, liked: true });
+      // Save to Supabase
+      if (isSupabaseConfigured && supabase && currentUserId) {
+        supabase.from('wishes').insert({
+          user_id: currentUserId,
+          name: product.name,
+          brand: product.brand ?? '',
+          price: product.price,
+          image: product.image,
+          url: product.url,
+          category: product.category || 'general',
+          note: product.note || '',
+          is_group_fund: product.isGroupFund || false,
+          liked: true,
+        }).then(() => {});
+      }
+    }
   };
 
   const handleAddToList = (listId: string) => {
@@ -649,55 +673,104 @@ function FriendWishCard({ product, onLike, onBuy }: {
 }) {
   const [liked, setLiked] = useState(false);
   const [bought, setBought] = useState(false);
-
-  if (bought) {
-    return (
-      <div className="bg-gray-50 rounded-2xl border-2 border-green-200 overflow-hidden opacity-70">
-        <div className="relative">
-          <img src={product.image} alt={product.name} className="w-full h-36 object-cover grayscale" />
-          <div className="absolute inset-0 bg-green-600/20 flex items-center justify-center">
-            <span className="bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">✓ Comprado</span>
-          </div>
-        </div>
-        <div className="p-2.5">
-          <p className="text-xs text-gray-400 font-medium">{product.brand}</p>
-          <p className="text-xs font-semibold text-gray-500 leading-tight line-clamp-2">{product.name}</p>
-          <p className="text-sm font-bold text-gray-400 mt-0.5">{fmt(product.price)}</p>
-          <button onClick={() => setBought(false)}
-            className="w-full mt-2 bg-gray-200 text-gray-500 text-xs py-1.5 rounded-lg font-medium">
-            Deshacer
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const [showDetail, setShowDetail] = useState(false);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="relative">
-        <img src={product.image} alt={product.name} className="w-full h-36 object-cover" />
-        <button
-          onClick={() => { setLiked(v => !v); onLike({ ...product, liked: !liked }); }}
-          className={`absolute top-2 right-2 p-1.5 rounded-full shadow ${liked ? 'bg-red-500 text-white' : 'bg-white text-gray-400'}`}>
-          <Heart size={14} fill={liked ? 'white' : 'none'} />
-        </button>
-      </div>
-      <div className="p-2.5">
-        <p className="text-xs text-purple-600 font-medium truncate">{product.brand}</p>
-        <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2">{product.name}</p>
-        <p className="text-sm font-bold text-gray-900 mt-0.5">{fmt(product.price)}</p>
-        <div className="flex gap-1.5 mt-2">
-          <button onClick={() => onBuy(product)}
-            className="flex-1 bg-purple-600 text-white text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
-            <ExternalLink size={11} /> Comprar
+    <>
+      <div className={`bg-white rounded-2xl shadow-sm overflow-hidden border transition ${bought ? 'border-green-200' : 'border-gray-100'}`}>
+        <div className="relative">
+          <button onClick={() => setShowDetail(true)} className="w-full">
+            <img src={product.image} alt={product.name} className="w-full h-36 object-cover" />
           </button>
-          <button onClick={() => setBought(true)}
-            className="flex-1 bg-green-50 border border-green-200 text-green-700 text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
-            <Check size={11} /> Comprado
+          {bought && (
+            <div className="absolute top-2 left-2">
+              <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                <Check size={9} /> Comprado
+              </span>
+            </div>
+          )}
+          {!bought && (
+            <button
+              onClick={() => { setLiked(v => !v); onLike({ ...product, liked: !liked }); }}
+              className={`absolute top-2 right-2 p-1.5 rounded-full shadow ${liked ? 'bg-red-500 text-white' : 'bg-white text-gray-400'}`}>
+              <Heart size={14} fill={liked ? 'white' : 'none'} />
+            </button>
+          )}
+        </div>
+        <div className="p-2.5">
+          <p className="text-xs text-purple-600 font-medium truncate">{product.brand}</p>
+          <button onClick={() => setShowDetail(true)} className="w-full text-left">
+            <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2">{product.name}</p>
           </button>
+          {product.note && (
+            <p className="text-[10px] text-purple-500 mt-0.5 truncate">💬 {product.note}</p>
+          )}
+          <p className="text-sm font-bold text-gray-900 mt-0.5">{fmt(product.price)}</p>
+          {!bought ? (
+            <div className="flex gap-1.5 mt-2">
+              <button onClick={() => onBuy(product)}
+                className="flex-1 bg-purple-600 text-white text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
+                <ExternalLink size={11} /> Comprar
+              </button>
+              <button onClick={() => setBought(true)}
+                className="flex-1 bg-gray-100 border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
+                <ShoppingBag size={11} /> Marcar comprado
+              </button>
+            </div>
+          ) : (
+            <div className="mt-2 flex items-center gap-1.5">
+              <div className="flex-1 text-center text-xs text-green-600 font-medium bg-green-50 py-1.5 rounded-lg">
+                ✓ Ya lo compraste
+              </div>
+              <button onClick={() => setBought(false)}
+                className="text-xs text-gray-400 px-2 py-1.5 rounded-lg border border-gray-200 hover:text-gray-600 transition">
+                Deshacer
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+
+      {/* Wish detail bottom-sheet */}
+      {showDetail && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setShowDetail(false)}>
+          <div className="bg-white rounded-t-3xl w-full max-h-[85vh] overflow-y-auto pb-safe" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-3" />
+            <img src={product.image} alt={product.name} className="w-full h-52 object-contain bg-gray-50 px-4" />
+            <div className="p-5">
+              <p className="text-xs text-purple-600 font-medium capitalize mb-1">{product.brand}</p>
+              <p className="font-bold text-gray-800 text-lg leading-snug">{product.name}</p>
+              <p className="text-2xl font-extrabold text-gray-900 my-2">{fmt(product.price)}</p>
+              {product.note && (
+                <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 mb-4">
+                  <p className="text-xs text-purple-500 font-semibold mb-1">Especificaciones del dueño:</p>
+                  <p className="text-sm text-purple-700">💬 {product.note}</p>
+                </div>
+              )}
+              <div className="flex flex-col gap-2 mt-3">
+                <button onClick={() => { onBuy(product); setShowDetail(false); }}
+                  className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-3 rounded-2xl font-semibold text-sm">
+                  <ExternalLink size={15} /> Comprar ahora
+                </button>
+                {!bought ? (
+                  <button onClick={() => { setBought(true); setShowDetail(false); }}
+                    className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3 rounded-2xl font-semibold text-sm border border-gray-200">
+                    <ShoppingBag size={15} /> Marcar como comprado
+                  </button>
+                ) : (
+                  <button onClick={() => { setBought(false); setShowDetail(false); }}
+                    className="w-full flex items-center justify-center gap-2 bg-green-50 text-green-700 py-3 rounded-2xl font-semibold text-sm border border-green-200">
+                    <Check size={15} /> Comprado — Deshacer
+                  </button>
+                )}
+                <button onClick={() => setShowDetail(false)}
+                  className="w-full text-gray-400 text-sm py-2">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1234,17 +1307,42 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
-  const sendRequest = (id: string) => {
+  const sendRequest = async (id: string) => {
     setPendingRequests(prev => new Set([...prev, id]));
     onFollow(id);
     showToast('Solicitud de amistad enviada ✓');
+    // Save to Supabase friendships table
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase.from('friendships').insert({
+            requester_id: session.user.id,
+            addressee_id: id,
+            status: 'pending',
+          });
+        }
+      } catch { /* friendships table may not exist yet — handled gracefully */ }
+    }
   };
 
-  const acceptRequest = (id: string) => {
+  const acceptRequest = async (id: string) => {
     setIncomingRequests(prev => prev.filter(r => r !== id));
     setMyFriends(prev => new Set([...prev, id]));
     onFollow(id);
     showToast('¡Ahora son amigos! 🎉');
+    // Update friendship status in Supabase
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase.from('friendships')
+            .update({ status: 'accepted' })
+            .eq('requester_id', id)
+            .eq('addressee_id', session.user.id);
+        }
+      } catch { /* handled gracefully */ }
+    }
   };
 
   // Show only non-friends as suggestions; filter by query
@@ -1805,11 +1903,12 @@ function AddProductTab({ lists, onSaved }: {
 }
 
 // ─── PROFILE SCREEN ──────────────────────────────────────────────────────────
-function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
+function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraWishes }: {
   onNavigate: (screen: Screen) => void;
   currentUser: AppUser & { avatar: string; name: string };
   onLogout: () => void;
   onUserUpdate: (u: AppUser) => void;
+  extraWishes?: Product[];
 }) {
   type PTab = 'wishes' | 'funds' | 'add';
   const [tab, setTab] = useState<PTab>('wishes');
@@ -1840,6 +1939,41 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
   const [myEvents, setMyEvents] = useState<{id:string;title:string;date:string;location:string;wishes:Product[]}[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load wishes from Supabase on mount; merge with extraWishes from feed likes
+  useEffect(() => {
+    if (isSupabaseConfigured && supabase && currentUser?.id) {
+      supabase.from('wishes').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false })
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            const mapped: Product[] = data.map((w: Record<string, unknown>) => ({
+              id: String(w.id),
+              name: String(w.name),
+              brand: String(w.brand ?? ''),
+              price: Number(w.price ?? 0),
+              image: String(w.image ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop'),
+              url: String(w.url ?? ''),
+              liked: Boolean(w.liked),
+              category: String(w.category ?? 'general'),
+              note: w.note ? String(w.note) : undefined,
+              isGroupFund: Boolean(w.is_group_fund),
+            }));
+            setWishes(mapped);
+          }
+        });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
+  // Merge feed-liked products into wishes
+  useEffect(() => {
+    if (!extraWishes || extraWishes.length === 0) return;
+    setWishes(prev => {
+      const ids = new Set(prev.map(p => p.id));
+      const newOnes = extraWishes.filter(p => !ids.has(p.id));
+      return newOnes.length > 0 ? [...newOnes, ...prev] : prev;
+    });
+  }, [extraWishes]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2268,7 +2402,7 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
       {tab === 'add' && (
         <AddProductTab
           lists={lists}
-          onSaved={(product, listId) => {
+          onSaved={async (product, listId) => {
             if (listId === 'wishes') {
               setWishes(prev => [product, ...prev]);
             } else {
@@ -2288,6 +2422,23 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate }: {
                 isOwner: true,
               };
               setFunds(prev => [newFund, ...prev]);
+            }
+            // Save to Supabase
+            if (isSupabaseConfigured && supabase && currentUser?.id) {
+              try {
+                await supabase.from('wishes').insert({
+                  user_id: currentUser.id,
+                  name: product.name,
+                  brand: product.brand ?? '',
+                  price: product.price,
+                  image: product.image,
+                  url: product.url,
+                  category: product.category || 'general',
+                  note: product.note || '',
+                  is_group_fund: product.isGroupFund || false,
+                  liked: true,
+                });
+              } catch { /* handled gracefully */ }
             }
             const dest = listId === 'wishes' ? 'Mis Deseos' : lists.find(l => l.id === listId)?.name ?? 'lista';
             showToast(`${product.isGroupFund ? '🎁 Fondo creado' : '⭐ Guardado'} en ${dest}`);
@@ -2519,6 +2670,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
   const [following, setFollowing] = useState<Set<string>>(new Set(FRIENDS.filter(f => f.following).map(f => f.id)));
   const [showNotifications, setShowNotifications] = useState(false);
+  const [feedLikedWishes, setFeedLikedWishes] = useState<Product[]>([]);
 
   // Supabase session init
   useEffect(() => {
@@ -2548,7 +2700,27 @@ function App() {
   }, []);
 
   const navigate = (s: Screen) => setScreen(s);
-  const onFollow = (id: string) => setFollowing(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const onFollow = async (id: string) => {
+    const isCurrentlyFollowing = following.has(id);
+    setFollowing(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    // Persist to Supabase
+    if (isSupabaseConfigured && supabase && appUser?.id) {
+      try {
+        if (!isCurrentlyFollowing) {
+          await supabase.from('friendships').insert({
+            requester_id: appUser.id,
+            addressee_id: id,
+            status: 'pending',
+          });
+        } else {
+          await supabase.from('friendships')
+            .delete()
+            .eq('requester_id', appUser.id)
+            .eq('addressee_id', id);
+        }
+      } catch { /* friendships table may not exist yet */ }
+    }
+  };
 
   const NOTIFICATIONS = [
     { id: '1', avatar: FRIENDS[0].avatar, text: `${FRIENDS[0].name} agregó "AirPods Pro" a su wishlist`, time: '2m', unread: true },
@@ -2637,8 +2809,17 @@ function App() {
                 </div>
               )}
             </div>
-            <button onClick={() => navigate('profile')}>
-              <Avatar src={currentUser.avatar} size={32} />
+            <button onClick={() => navigate('profile')}
+              className="w-8 h-8 rounded-full overflow-hidden border-2 border-purple-200 shadow-sm flex-shrink-0">
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-full h-full object-cover"
+                onError={e => {
+                  const img = e.target as HTMLImageElement;
+                  img.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser.name)}&backgroundColor=7C3AED&textColor=ffffff`;
+                }}
+              />
             </button>
             <button onClick={() => { if (window.confirm('¿Cerrar sesión?')) handleLogout(); }}
               className="p-2 text-gray-400 hover:text-red-500 transition">
@@ -2650,12 +2831,28 @@ function App() {
 
       {/* SCREEN CONTENT */}
       <main className="pb-20 pt-4">
-        {screen === 'home' && <HomeScreen onNavigate={navigate} following={following} onFollow={onFollow} />}
+        {screen === 'home' && (
+          <HomeScreen
+            onNavigate={navigate}
+            following={following}
+            onFollow={onFollow}
+            currentUserId={appUser?.id}
+            onFeedLike={(p) => setFeedLikedWishes(prev => prev.find(x => x.id === p.id) ? prev : [p, ...prev])}
+          />
+        )}
         {screen === 'discover' && <DiscoverScreen />}
         {screen === 'search' && <SearchFriendsScreen onNavigate={navigate} following={following} onFollow={onFollow} />}
         {screen === 'messages' && <MessagingScreen />}
 
-        {screen === 'profile' && <ProfileScreen onNavigate={navigate} currentUser={currentUser} onLogout={handleLogout} onUserUpdate={(u) => { setAppUser(u); setStoredCurrent(u); }} />}
+        {screen === 'profile' && (
+          <ProfileScreen
+            onNavigate={navigate}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            onUserUpdate={(u) => { setAppUser(u); setStoredCurrent(u); }}
+            extraWishes={feedLikedWishes}
+          />
+        )}
       </main>
 
       <Navigation current={screen} onNavigate={navigate} />
