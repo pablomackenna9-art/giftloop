@@ -255,6 +255,12 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
   const [toast, setToast] = useState('');
   const [forwardingProduct, setForwardingProduct] = useState<Product | null>(null);
   const [forwardSentTo, setForwardSentTo] = useState<string | null>(null);
+  // Dynamic suggested friends — pool of non-followed users, rotates as you follow
+  const [suggestedPool, setSuggestedPool] = useState<UserType[]>(() =>
+    FRIENDS.filter(f => !f.following).slice(30, 60)
+  );
+  const [followedSuggested, setFollowedSuggested] = useState<Set<string>>(new Set());
+  const visibleSuggested = suggestedPool.filter(f => !followedSuggested.has(f.id)).slice(0, 5);
 
   const sortedFriends = sortByBirthdayProximity(FRIENDS);
   const todayBirthdays = sortedFriends.filter(f => isTodayBirthday(f.birthday));
@@ -541,6 +547,35 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
           </div>
         </div>
 
+        {/* ── Mobile: Personas que quizás conoces ── */}
+        <div className="lg:hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-bold text-gray-800 text-sm">Personas que quizás conoces</p>
+            <button onClick={() => {}} className="text-xs text-purple-600">Ver todos</button>
+          </div>
+          <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1">
+            {visibleSuggested.map(f => (
+              <div key={f.id} className="flex flex-col items-center gap-1.5 flex-shrink-0 w-16">
+                <button onClick={() => { setSelectedFriend(f); setSubView('friend_profile'); }}>
+                  <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-purple-400 to-pink-400">
+                    <div className="w-full h-full rounded-full overflow-hidden bg-white p-0.5">
+                      <img src={f.avatar} alt={f.name} className="w-full h-full rounded-full object-cover" />
+                    </div>
+                  </div>
+                </button>
+                <p className="text-[10px] font-medium text-gray-700 text-center leading-tight line-clamp-2">{f.name}</p>
+                <button onClick={() => {
+                  onFollow(f.id);
+                  setFollowedSuggested(prev => new Set([...prev, f.id]));
+                }}
+                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition ${followedSuggested.has(f.id) ? 'bg-gray-100 text-gray-500' : 'bg-purple-100 text-purple-700'}`}>
+                  {followedSuggested.has(f.id) ? '✓ Listo' : '+ Seguir'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Feed — Instagram style */}
         <div className="space-y-0 -mx-4">
           {[...(customFeedItems ?? []), ...FEED_ITEMS].map(item => (
@@ -631,10 +666,10 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
           </button>
         ))}
 
-        {/* Suggested friends */}
+        {/* Suggested friends — dynamic, rotates when followed */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <p className="font-bold text-gray-800 text-sm mb-3">Personas que quizás conoces</p>
-          {FRIENDS.slice(30, 35).map(f => (
+          {visibleSuggested.map(f => (
             <div key={f.id} className="flex items-center gap-2 mb-3">
               <button onClick={() => { setSelectedFriend(f); setSubView('friend_profile'); }}>
                 <Avatar src={f.avatar} size={36} />
@@ -643,9 +678,22 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
                 <p className="text-xs font-semibold text-gray-800 truncate">{f.name} {f.lastName}</p>
                 <p className="text-xs text-gray-400">Amigo de amigos</p>
               </button>
-              <button onClick={() => onFollow(f.id)}
-                className={`text-xs px-2 py-1 rounded-full font-medium transition ${following.has(f.id) ? 'bg-gray-100 text-gray-500' : 'text-purple-600 font-semibold'}`}>
-                {following.has(f.id) ? '✓' : 'Seguir'}
+              <button onClick={() => {
+                onFollow(f.id);
+                setFollowedSuggested(prev => new Set([...prev, f.id]));
+                // Expand pool if getting low
+                setSuggestedPool(prev => {
+                  const followed = new Set([...prev.filter(p => followedSuggested.has(p.id)).map(p => p.id), f.id]);
+                  const remaining = prev.filter(p => !followed.has(p.id));
+                  if (remaining.length < 3) {
+                    const extra = FRIENDS.filter(fr => !fr.following && !prev.find(p => p.id === fr.id)).slice(0, 10);
+                    return [...prev, ...extra];
+                  }
+                  return prev;
+                });
+              }}
+                className={`text-xs px-2 py-1 rounded-full font-medium transition ${followedSuggested.has(f.id) ? 'bg-gray-100 text-gray-500' : 'text-purple-600 font-semibold'}`}>
+                {followedSuggested.has(f.id) ? '✓' : 'Seguir'}
               </button>
             </div>
           ))}
@@ -863,6 +911,151 @@ function FriendWishCard({ product, onLike, onBuy, buyerName = null }: {
   );
 }
 
+// ─── FRIENDS LIST BOTTOM-SHEET ───────────────────────────────────────────────
+function FriendsListSheet({ friends, title, onSelectFriend, onClose }: {
+  friends: UserType[];
+  title?: string;
+  onSelectFriend: (f: UserType) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState('');
+  const filtered = query.length > 1
+    ? friends.filter(f => `${f.name} ${f.lastName}`.toLowerCase().includes(query.toLowerCase()))
+    : friends;
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl w-full max-h-[82vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white rounded-t-3xl border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          <p className="font-bold text-gray-800">{title ?? 'Amigos'} ({friends.length})</p>
+          <button onClick={onClose}><X size={20} className="text-gray-400" /></button>
+        </div>
+        <div className="px-4 py-2 border-b border-gray-50">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="Buscar..."
+              className="w-full pl-9 pr-3 py-2 text-sm bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-300" />
+          </div>
+        </div>
+        <div className="overflow-y-auto p-4 space-y-1">
+          {filtered.map(f => (
+            <button key={f.id} onClick={() => { onSelectFriend(f); onClose(); }}
+              className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-purple-50 text-left transition">
+              <div className="w-11 h-11 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex-shrink-0">
+                <div className="w-full h-full rounded-full overflow-hidden bg-white p-0.5">
+                  <img src={f.avatar} alt={f.name} className="w-full h-full rounded-full object-cover" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 text-sm">{f.name} {f.lastName}</p>
+                <p className="text-xs text-gray-400">{f.friendsCount} amigos · {f.followersCount} seguidores</p>
+              </div>
+              <ChevronRight size={15} className="text-gray-300" />
+            </button>
+          ))}
+          {filtered.length === 0 && <p className="text-center text-gray-400 text-sm py-8">Sin resultados</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MERCADO PAGO VIEW ────────────────────────────────────────────────────────
+function MercadoPagoView({ amount, productName, onSuccess, onBack }: {
+  amount: number;
+  productName: string;
+  onSuccess: () => void;
+  onBack: () => void;
+}) {
+  const [payMethod, setPayMethod] = useState<'card' | 'transfer' | 'cash' | null>(null);
+  const [step, setStep] = useState<'select' | 'processing' | 'success'>('select');
+
+  if (step === 'success') {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-5">
+          <Check size={40} className="text-green-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Pago exitoso!</h2>
+        <p className="text-gray-500 mb-1">Tu aporte fue procesado correctamente.</p>
+        <p className="text-3xl font-extrabold text-gray-900 my-4">{fmt(amount)}</p>
+        <p className="text-xs text-gray-400 mb-8">Recibirás un comprobante en tu email</p>
+        <button onClick={onSuccess}
+          className="w-full max-w-xs bg-blue-500 text-white py-3.5 rounded-2xl font-bold text-base shadow-md shadow-blue-200">
+          Volver al regalo
+        </button>
+      </div>
+    );
+  }
+
+  if (step === 'processing') {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-6" />
+        <p className="font-semibold text-gray-700 text-lg">Procesando pago...</p>
+        <p className="text-gray-400 text-sm mt-2">No cierres esta pantalla</p>
+        <button className="hidden" onClick={() => setTimeout(() => setStep('success'), 1800)} ref={el => { if (el) el.click(); }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* MP Header */}
+      <div className="bg-[#009EE3] text-white px-4 py-4 flex items-center gap-3">
+        <button onClick={onBack}><ArrowLeft size={20} /></button>
+        <div className="flex-1">
+          <p className="font-bold text-lg">Mercado Pago</p>
+          <p className="text-blue-200 text-xs">Pago 100% seguro</p>
+        </div>
+        <div className="text-2xl">💙</div>
+      </div>
+
+      {/* Amount card */}
+      <div className="bg-white mx-4 mt-4 rounded-2xl p-5 shadow-sm border border-gray-100 text-center mb-3">
+        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Aportando a</p>
+        <p className="text-sm font-semibold text-gray-700 mb-3 leading-snug">{productName}</p>
+        <p className="text-4xl font-black text-gray-900">{fmt(amount)}</p>
+      </div>
+
+      {/* Payment methods */}
+      <div className="bg-white mx-4 rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
+        <p className="font-semibold text-gray-700 text-sm mb-3">¿Cómo quieres pagar?</p>
+        {([
+          { id: 'card' as const, icon: '💳', label: 'Tarjeta de crédito o débito', sub: 'Visa, Mastercard, CMR y más' },
+          { id: 'transfer' as const, icon: '🏦', label: 'Transferencia bancaria', sub: 'Banco Estado, BCI, Santander...' },
+          { id: 'cash' as const, icon: '💵', label: 'Saldo en Mercado Pago', sub: `Disponible: ${fmt(Math.floor(Math.random() * 80000 + 10000))}` },
+        ]).map(m => (
+          <button key={m.id} onClick={() => setPayMethod(m.id)}
+            className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 mb-2 transition text-left ${payMethod === m.id ? 'border-[#009EE3] bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+            <span className="text-2xl">{m.icon}</span>
+            <div className="flex-1">
+              <p className="font-semibold text-gray-800 text-sm">{m.label}</p>
+              <p className="text-xs text-gray-400">{m.sub}</p>
+            </div>
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${payMethod === m.id ? 'border-[#009EE3] bg-[#009EE3]' : 'border-gray-300'}`}>
+              {payMethod === m.id && <div className="w-2 h-2 bg-white rounded-full" />}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Pay button */}
+      <div className="px-4 pb-8">
+        <button
+          onClick={() => { if (payMethod) { setStep('processing'); setTimeout(() => setStep('success'), 2200); } }}
+          disabled={!payMethod}
+          className="w-full bg-[#009EE3] text-white py-4 rounded-2xl font-bold text-base disabled:opacity-40 transition shadow-md shadow-blue-200 flex items-center justify-center gap-2">
+          Pagar {fmt(amount)}
+        </button>
+        <p className="text-center text-xs text-gray-400 mt-3 flex items-center justify-center gap-1">
+          🔒 Transacción protegida por Mercado Pago
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── FRIEND PROFILE VIEW ─────────────────────────────────────────────────────
 function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, onLike }: {
   friend: UserType;
@@ -883,8 +1076,32 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
   const [inviteLocation, setInviteLocation] = useState('');
   const [inviteLinked, setInviteLinked] = useState<string[]>([]);
   const [inviteSent, setInviteSent] = useState(false);
+  const [localFollowers, setLocalFollowers] = useState(friend.followersCount);
+  const [localFriends, setLocalFriends] = useState(friend.friendsCount);
+  const [showFriendsList, setShowFriendsList] = useState(false);
+  const [mpView, setMpView] = useState<{ amount: number; productName: string } | null>(null);
+  // Stack for browsing friends-of-friends
+  const [profileStack, setProfileStack] = useState<UserType[]>([]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+
+  // Friends of this profile (slice of FRIENDS simulating their friends)
+  const profileFriends = FRIENDS.filter(f => f.id !== friend.id).slice(
+    (parseInt(friend.id.replace(/\D/g,'') || '0', 10) % 30),
+    (parseInt(friend.id.replace(/\D/g,'') || '0', 10) % 30) + 12
+  );
+
+  // Handle follow with count update
+  const handleFollow = () => {
+    onFollow();
+    if (!isFollowing) {
+      setLocalFollowers(v => v + 1);
+      setLocalFriends(v => v + 1);
+    } else {
+      setLocalFollowers(v => Math.max(0, v - 1));
+      setLocalFriends(v => Math.max(0, v - 1));
+    }
+  };
 
   // Simulated data for this friend — items 1 & 3 simulate pre-bought by other users
   const SIMULATED_BUYERS = ['María G.', 'Sebastián R.'];
@@ -902,7 +1119,44 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
     { id: 'fl3', name: 'Viajes', emoji: '✈️' },
   ];
 
-  // Contribute flow
+  // ── Mercado Pago view ──
+  if (mpView) {
+    return (
+      <MercadoPagoView
+        amount={mpView.amount}
+        productName={mpView.productName}
+        onBack={() => setMpView(null)}
+        onSuccess={() => {
+          setContributed(prev => new Set([...prev, 'mp_' + Date.now()]));
+          setMpView(null);
+          showToast('¡Aporte enviado con Mercado Pago! 💙');
+        }}
+      />
+    );
+  }
+
+  // ── Friends-of-friends sub-profile ──
+  if (profileStack.length > 0) {
+    const stackFriend = profileStack[profileStack.length - 1];
+    return (
+      <div>
+        <button onClick={() => setProfileStack(prev => prev.slice(0, -1))}
+          className="flex items-center gap-1 text-purple-600 mb-4 text-sm font-medium">
+          <ArrowLeft size={16} /> Volver
+        </button>
+        <FriendProfileView
+          friend={stackFriend}
+          isFollowing={isFollowing}
+          onFollow={onFollow}
+          onMessage={onMessage}
+          onBuy={onBuy}
+          onLike={onLike}
+        />
+      </div>
+    );
+  }
+
+  // ── Contribute flow (amount picker → MP) ──
   if (contributingFund) {
     const pct = Math.round((contributingFund.currentAmount / contributingFund.targetAmount) * 100);
     return (
@@ -937,14 +1191,14 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
                 placeholder="Otro monto"
                 className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-400" />
             </div>
+            {/* Mercado Pago pay button */}
             <button onClick={() => {
               if (!contributeAmount) return;
-              setContributed(prev => new Set([...prev, contributingFund.id]));
-              showToast(`¡Aporte de ${fmt(Number(contributeAmount))} enviado! 🎁`);
+              setMpView({ amount: Number(contributeAmount), productName: contributingFund.product.name });
               setContributingFund(null); setContributeAmount('');
             }} disabled={!contributeAmount}
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-semibold disabled:opacity-40 flex items-center justify-center gap-2">
-              <Heart size={16} fill="white" /> Aportar {contributeAmount ? fmt(Number(contributeAmount)) : ''}
+              className="w-full bg-[#009EE3] text-white py-3.5 rounded-xl font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-blue-200">
+              💙 Aportar con Mercado Pago
             </button>
           </div>
         </div>
@@ -966,16 +1220,23 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
           </div>
           {/* 4 stats */}
           <div className="flex-1 grid grid-cols-4 gap-1 text-center">
-            {[
-              [String(friend.friendsCount), 'amigos'],
-              [String(friend.followersCount), 'seguidores'],
-              [String(friendWishes.length), 'deseos'],
-              [String(friendFunds.length), 'fondos'],
-            ].map(([n, label]) => (
-              <div key={label}>
-                <p className="font-bold text-gray-900 text-base leading-tight">{n}</p>
-                <p className="text-[10px] text-gray-500 leading-tight">{label}</p>
-              </div>
+            {([
+              [String(localFriends), 'amigos', () => setShowFriendsList(true)],
+              [String(localFollowers), 'seguidores', () => setShowFriendsList(true)],
+              [String(friendWishes.length), 'deseos', null],
+              [String(friendFunds.length), 'fondos', null],
+            ] as [string, string, (() => void) | null][]).map(([n, label, action]) => (
+              action ? (
+                <button key={label} onClick={action} className="text-center">
+                  <p className="font-bold text-gray-900 text-base leading-tight">{n}</p>
+                  <p className="text-[10px] text-gray-500 leading-tight underline decoration-dotted">{label}</p>
+                </button>
+              ) : (
+                <div key={label} className="text-center">
+                  <p className="font-bold text-gray-900 text-base leading-tight">{n}</p>
+                  <p className="text-[10px] text-gray-500 leading-tight">{label}</p>
+                </div>
+              )
             ))}
           </div>
         </div>
@@ -990,7 +1251,7 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
 
         {/* Action buttons */}
         <div className="flex gap-2 pb-3">
-          <button onClick={onFollow}
+          <button onClick={handleFollow}
             className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition border ${isFollowing ? 'bg-gray-50 text-gray-700 border-gray-300' : 'bg-purple-600 text-white border-purple-600'}`}>
             {isFollowing ? '✓ Siguiendo' : '+ Seguir'}
           </button>
@@ -1126,6 +1387,16 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
             );
           })}
         </div>
+      )}
+
+      {/* Friends list sheet */}
+      {showFriendsList && (
+        <FriendsListSheet
+          friends={profileFriends}
+          title={`Amigos de ${friend.name}`}
+          onSelectFriend={(f) => setProfileStack(prev => [...prev, f])}
+          onClose={() => setShowFriendsList(false)}
+        />
       )}
 
       {toast && <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm z-50">{toast}</div>}
@@ -2036,6 +2307,8 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
   const [selectedWish, setSelectedWish] = useState<Product | null>(null);
   const [likedWishes, setLikedWishes] = useState<Set<string>>(new Set());
   const [showEventForm, setShowEventForm] = useState(false);
+  const [showMyFriendsList, setShowMyFriendsList] = useState(false);
+  const [viewingFriendFromProfile, setViewingFriendFromProfile] = useState<UserType | null>(null);
   const [eventTitle, setEventTitle] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventLocation, setEventLocation] = useState('');
@@ -2220,16 +2493,23 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
 
           {/* Stats */}
           <div className="flex-1 flex justify-around">
-            {[
-              ['87', 'amigos'],
-              ['165', 'seguidores'],
-              [String(wishes.length), 'deseos'],
-              [String(funds.length), 'fondos'],
-            ].map(([n, label]) => (
-              <div key={label} className="text-center">
-                <p className="font-bold text-gray-900 text-lg leading-tight">{n}</p>
-                <p className="text-xs text-gray-500">{label}</p>
-              </div>
+            {([
+              [String(FRIENDS.filter(f => f.following).length + (extraWishes?.length ?? 0 > 0 ? 0 : 0)), 'amigos', () => setShowMyFriendsList(true)],
+              ['165', 'seguidores', () => setShowMyFriendsList(true)],
+              [String(wishes.length), 'deseos', null],
+              [String(funds.length), 'fondos', null],
+            ] as [string, string, (() => void) | null][]).map(([n, label, action]) => (
+              action ? (
+                <button key={label} onClick={action} className="text-center">
+                  <p className="font-bold text-gray-900 text-lg leading-tight">{n}</p>
+                  <p className="text-xs text-gray-500 underline decoration-dotted">{label}</p>
+                </button>
+              ) : (
+                <div key={label} className="text-center">
+                  <p className="font-bold text-gray-900 text-lg leading-tight">{n}</p>
+                  <p className="text-xs text-gray-500">{label}</p>
+                </div>
+              )
             ))}
           </div>
         </div>
@@ -2600,6 +2880,36 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
       {toast && <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm z-50">{toast}</div>}
       </div>{/* end px-4 */}
     </div>{/* end max-w-lg */}
+
+    {/* ── My friends list sheet ── */}
+    {showMyFriendsList && (
+      <FriendsListSheet
+        friends={FRIENDS.filter(f => f.following)}
+        title="Mis Amigos"
+        onSelectFriend={(f) => { setShowMyFriendsList(false); setViewingFriendFromProfile(f); }}
+        onClose={() => setShowMyFriendsList(false)}
+      />
+    )}
+
+    {/* ── Friend profile from my profile ── */}
+    {viewingFriendFromProfile && (
+      <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+        <div className="max-w-lg mx-auto p-4">
+          <button onClick={() => setViewingFriendFromProfile(null)}
+            className="flex items-center gap-1 text-purple-600 font-medium mb-4">
+            <ArrowLeft size={18} /> Volver
+          </button>
+          <FriendProfileView
+            friend={viewingFriendFromProfile}
+            isFollowing={true}
+            onFollow={() => {}}
+            onMessage={() => { setViewingFriendFromProfile(null); onNavigate('messages'); }}
+            onBuy={p => window.open(p.url, '_blank')}
+            onLike={() => {}}
+          />
+        </div>
+      </div>
+    )}
 
     {/* ── Wish bottom-sheet modal ── */}
     {selectedWish && (

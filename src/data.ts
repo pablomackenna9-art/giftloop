@@ -306,6 +306,22 @@ export const EVENTS: Event[] = [
     ],
     attendees: FRIENDS.slice(10, 30),
   },
+  {
+    id: 'ev4',
+    type: 'asado',
+    title: 'Asado Cumpleaños de Cecil 🎂🥩',
+    date: '2026-05-30',
+    location: 'La Florida, Santiago',
+    host: FRIENDS[12],
+    description: '¡Cecil cumple años y lo celebramos con el mejor asado del año! Trae algo para la parrilla.',
+    emoji: '🥩',
+    wishlist: [
+      { id: 'asa1', name: 'Parrilla Weber Master-Touch', brand: 'Weber', price: 289990, image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop', url: 'https://www.weber.com/', liked: false, category: 'Outdoor' },
+      { id: 'asa2', name: 'Set Cuchillos Asado Tramontina', brand: 'Tramontina', price: 59990, image: 'https://images.unsplash.com/photo-1588421357574-87938a86fa28?w=400&h=400&fit=crop', url: 'https://www.tramontina.cl/', liked: false, category: 'Cocina' },
+      { id: 'asa3', name: 'Cooler Coleman 54 L', brand: 'Coleman', price: 89990, image: 'https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=400&h=400&fit=crop', url: 'https://www.coleman.com/', liked: false, category: 'Outdoor' },
+    ],
+    attendees: FRIENDS.slice(0, 25),
+  },
 ];
 
 // ─── FEED ITEMS ──────────────────────────────────────────────────────────────
