@@ -47,6 +47,16 @@ function setStoredCurrent(u: AppUser | null) {
   else localStorage.removeItem('gl_current');
 }
 
+// Fast user cache (works for both Supabase and local auth)
+const CACHE_KEY = 'gl_user_cache';
+function getCachedUser(): AppUser | null {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) ?? 'null'); } catch { return null; }
+}
+function setCachedUser(u: AppUser | null) {
+  if (u) localStorage.setItem(CACHE_KEY, JSON.stringify(u));
+  else localStorage.removeItem(CACHE_KEY);
+}
+
 // ─── ERROR BOUNDARY (prevents blank screen on runtime errors) ─────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
@@ -2802,12 +2812,22 @@ function AuthScreen({ onAuth }: { onAuth: (user: AppUser) => void }) {
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function App() {
   const [screen, setScreen] = useState<Screen>('home');
-  // When Supabase is configured, start null and load from session
-  // When not configured, load from localStorage
-  const [appUser, setAppUser] = useState<AppUser | null>(() =>
-    isSupabaseConfigured ? null : getStoredCurrent()
+
+  // ── Fast init: show cached user immediately, no spinner ───────────────────
+  const [appUser, setAppUser] = useState<AppUser | null>(() => {
+    // Prefer cache (works for both Supabase and local auth)
+    const cached = getCachedUser();
+    if (cached) return cached;
+    if (!isSupabaseConfigured) return getStoredCurrent();
+    return null;
+  });
+
+  // Only show full-screen loading when Supabase is configured AND there is
+  // no cached user at all (first visit / after logout)
+  const [authLoading, setAuthLoading] = useState(() =>
+    isSupabaseConfigured && !getCachedUser()
   );
-  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+
   const [following, setFollowing] = useState<Set<string>>(new Set(FRIENDS.filter(f => f.following).map(f => f.id)));
   const [showNotifications, setShowNotifications] = useState(false);
   const [feedLikedWishes, setFeedLikedWishes] = useState<Product[]>([]);
@@ -2815,28 +2835,53 @@ function App() {
   const [walletBalance, setWalletBalance] = useState(345000);
   const [friendsList, setFriendsList] = useState(FRIENDS);
 
-  // Supabase session init
+  // ── Supabase session validation (runs in background) ──────────────────────
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
 
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const { data: profile } = await supabase!.from('profiles').select('*').eq('id', session.user.id).single();
-        setAppUser(mapSupabaseUser(session.user, profile));
-      }
-      setAuthLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const { data: profile } = await supabase!.from('profiles').select('*').eq('id', session.user.id).single();
-        setAppUser(mapSupabaseUser(session.user, profile));
-      } else if (event === 'SIGNED_OUT') {
+    const applySession = async (supaUser: SupabaseUser | null) => {
+      if (!supaUser) {
+        setCachedUser(null);
         setAppUser(null);
+        setAuthLoading(false);
+        return;
       }
+      // Use cached profile first so UI is instant; fetch fresh profile in bg
+      const cached = getCachedUser();
+      if (cached && cached.id === supaUser.id) {
+        setAppUser(cached);
+        setAuthLoading(false);
+        // Refresh profile data silently (avatar, bio, name may have changed)
+        supabase!.from('profiles').select('*').eq('id', supaUser.id).single()
+          .then(({ data: profile }) => {
+            const fresh = mapSupabaseUser(supaUser, profile);
+            setCachedUser(fresh);
+            setAppUser(fresh);
+          });
+        return;
+      }
+      // No cache match — fetch profile (first login on this device)
+      const { data: profile } = await supabase!.from('profiles').select('*').eq('id', supaUser.id).single();
+      const user = mapSupabaseUser(supaUser, profile);
+      setCachedUser(user);
+      setAppUser(user);
       setAuthLoading(false);
+    };
+
+    // Check session once (supabase-js reads from localStorage — instant)
+    supabase.auth.getSession().then(({ data: { session } }) =>
+      applySession(session?.user ?? null)
+    );
+
+    // Keep in sync with auth changes (login / logout / token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setCachedUser(null);
+        setAppUser(null);
+        setAuthLoading(false);
+        return;
+      }
+      if (session?.user) applySession(session.user);
     });
 
     return () => subscription.unsubscribe();
@@ -2884,9 +2929,11 @@ function App() {
 
   const handleAuth = (user: AppUser) => {
     setAppUser(user);
+    setCachedUser(user);          // persist for instant next load
     if (!isSupabaseConfigured) setStoredCurrent(user);
   };
   const handleLogout = async () => {
+    setCachedUser(null);          // clear cache so next load shows login
     if (isSupabaseConfigured && supabase) {
       await supabase.auth.signOut();
     } else {
@@ -3007,7 +3054,7 @@ function App() {
             onNavigate={navigate}
             currentUser={currentUser}
             onLogout={handleLogout}
-            onUserUpdate={(u) => { setAppUser(u); setStoredCurrent(u); }}
+            onUserUpdate={(u) => { setAppUser(u); setCachedUser(u); setStoredCurrent(u); }}
             extraWishes={feedLikedWishes}
             walletBalance={walletBalance}
             onWalletCredit={(amount) => setWalletBalance(prev => prev + amount)}
