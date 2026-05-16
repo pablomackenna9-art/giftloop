@@ -223,12 +223,15 @@ function AddToListModal({ product, myLists, onSelect, onClose }: {
 }
 
 // ─── HOME SCREEN ─────────────────────────────────────────────────────────────
-function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike }: {
+function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike, customFeedItems, currentUser, walletBalance }: {
   onNavigate: (screen: Screen, data?: unknown) => void;
   following: Set<string>;
   onFollow: (id: string) => void;
   currentUserId?: string;
   onFeedLike?: (p: Product) => void;
+  customFeedItems?: import('./types').FeedItem[];
+  currentUser?: AppUser;
+  walletBalance?: number;
 }) {
   const [subView, setSubView] = useState<'feed' | 'wallet_review' | 'wallet_withdraw' | 'birthdays_all' | 'event_detail' | 'friend_profile' | 'brand_store'>('feed');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -364,7 +367,7 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
       <div className="p-4 max-w-lg mx-auto">
         <BackButton onBack={() => setSubView('feed')} label="Mi Saldo" />
         <h2 className="text-xl font-bold text-gray-800 mb-1">Aportes Recibidos</h2>
-        <p className="text-sm text-gray-500 mb-4">Total recibido: <strong className="text-purple-600">$345.000</strong></p>
+        <p className="text-sm text-gray-500 mb-4">Total recibido: <strong className="text-purple-600">{fmt(walletBalance ?? 345000)}</strong></p>
         <div className="space-y-3">
           {WALLET_CONTRIBUTIONS.map((c, i) => (
             <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
@@ -392,7 +395,7 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
               <DollarSign size={28} className="text-purple-600" />
             </div>
             <p className="text-center text-gray-500 mb-2">Saldo disponible</p>
-            <p className="text-center text-3xl font-bold text-gray-800 mb-6">$345.000</p>
+            <p className="text-center text-3xl font-bold text-gray-800 mb-6">{fmt(walletBalance ?? 345000)}</p>
             <label className="block text-sm font-medium text-gray-700 mb-1">Banco destino</label>
             <select className="w-full border border-gray-200 rounded-xl p-3 mb-4 text-sm">
               <option>Banco Estado</option><option>Santander</option><option>BCI</option>
@@ -432,7 +435,7 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
         {/* Saldo */}
         <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-5 text-white mb-4">
           <p className="text-purple-200 text-sm font-medium mb-1">Mi Saldo GiftLoop</p>
-          <p className="text-3xl font-bold mb-4">$345.000</p>
+          <p className="text-3xl font-bold mb-4">{fmt(walletBalance ?? 345000)}</p>
           <div className="flex gap-2">
             <button onClick={() => setSubView('wallet_review')} className="flex-1 bg-white/20 hover:bg-white/30 text-white text-sm py-2 rounded-xl font-medium transition">
               Revisar
@@ -459,7 +462,7 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
         {/* Mobile Saldo */}
         <div className="lg:hidden bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-4 text-white mb-4">
           <p className="text-purple-200 text-sm">Mi Saldo</p>
-          <p className="text-2xl font-bold mb-3">$345.000</p>
+          <p className="text-2xl font-bold mb-3">{fmt(walletBalance ?? 345000)}</p>
           <div className="flex gap-2">
             <button onClick={() => setSubView('wallet_review')} className="flex-1 bg-white/20 text-white text-sm py-2 rounded-xl">Revisar</button>
             <button onClick={() => setSubView('wallet_withdraw')} className="flex-1 bg-white text-purple-700 text-sm py-2 rounded-xl font-semibold">Retirar</button>
@@ -528,50 +531,78 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
           </div>
         </div>
 
-        {/* Feed */}
-        <div className="space-y-4">
-          {FEED_ITEMS.map(item => (
-            <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-              <div className="flex items-center gap-3 mb-3">
+        {/* Feed — Instagram style */}
+        <div className="space-y-0 -mx-4">
+          {[...(customFeedItems ?? []), ...FEED_ITEMS].map(item => (
+            <div key={item.id} className="bg-white border-b border-gray-100">
+              {/* ── Post header ── */}
+              <div className="flex items-center gap-3 px-4 py-3">
                 <button onClick={() => { setSelectedFriend(item.user); setSubView('friend_profile'); }}>
-                  <Avatar src={item.user.avatar} size={44} />
-                </button>
-                <div className="flex-1">
-                  <button onClick={() => { setSelectedFriend(item.user); setSubView('friend_profile'); }}
-                    className="font-semibold text-gray-800 hover:text-purple-600 text-sm">{item.user.name} {item.user.lastName}</button>
-                  <p className="text-xs text-gray-500">
-                    {item.action === 'added' ? '✨ Agregó un deseo' : item.action === 'liked' ? '❤️ Le gustó un producto' : `📋 Creó la lista "${item.listName}"`}
-                    {' · '}{item.timestamp}
-                  </p>
-                </div>
-                <button onClick={() => onFollow(item.user.id)}
-                  className={`text-xs px-3 py-1 rounded-full font-medium border transition ${following.has(item.user.id) ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-purple-600 text-white border-purple-600'}`}>
-                  {following.has(item.user.id) ? 'Siguiendo' : 'Seguir'}
-                </button>
-              </div>
-              {item.product && (
-                <div className="bg-gray-50 rounded-xl overflow-hidden">
-                  <img src={item.product.image} alt={item.product.name} className="w-full h-48 object-cover" />
-                  <div className="p-3">
-                    <p className="text-xs text-purple-600 font-medium">{item.product.brand}</p>
-                    <p className="font-semibold text-gray-800">{item.product.name}</p>
-                    <p className="text-lg font-bold text-gray-900">{fmt(item.product.price)}</p>
-                    <div className="flex gap-2 mt-3">
-                      <button onClick={() => handleLike(item.product!)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition border ${likedItems.has(item.product.id) ? 'bg-red-50 text-red-500 border-red-200' : 'border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-500'}`}>
-                        <Heart size={15} fill={likedItems.has(item.product.id) ? 'currentColor' : 'none'} /> Lo Quiero
-                      </button>
-                      <button onClick={() => handleBuy(item.product!)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600 text-white text-sm font-medium">
-                        <ExternalLink size={15} /> Comprar
-                      </button>
-                      <button onClick={() => setForwardingProduct(item.product!)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:border-purple-300 hover:text-purple-600 transition">
-                        <Send size={15} />
-                      </button>
+                  <div className="w-9 h-9 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
+                    <div className="w-full h-full rounded-full overflow-hidden bg-white p-0.5">
+                      <img src={item.user.avatar} alt={item.user.name} className="w-full h-full rounded-full object-cover" />
                     </div>
                   </div>
-                </div>
+                </button>
+                <button onClick={() => { setSelectedFriend(item.user); setSubView('friend_profile'); }} className="flex-1 text-left">
+                  <p className="font-semibold text-gray-900 text-sm leading-tight">{item.user.name} {item.user.lastName}</p>
+                  <p className="text-xs text-gray-400">
+                    {item.action === 'added' ? '✨ Agregó un deseo' : item.action === 'liked' ? '❤️ Lo quiere' : `📋 "${item.listName}"`}
+                    {' · '}{item.timestamp}
+                  </p>
+                </button>
+                <button className="text-gray-400 p-1">
+                  <Menu size={16} />
+                </button>
+              </div>
+
+              {/* ── Product image (full width, square-ish) ── */}
+              {item.product && (
+                <>
+                  <div className="relative">
+                    <img src={item.product.image} alt={item.product.name}
+                      className="w-full object-cover"
+                      style={{ maxHeight: '380px', minHeight: '260px' }}
+                    />
+                  </div>
+
+                  {/* ── Action buttons ── */}
+                  <div className="flex items-center gap-3 px-4 pt-3 pb-1">
+                    <button onClick={() => handleLike(item.product!)}
+                      className={`transition ${likedItems.has(item.product.id) ? 'text-red-500 scale-110' : 'text-gray-700 hover:text-red-400'}`}>
+                      <Heart size={26} fill={likedItems.has(item.product.id) ? 'currentColor' : 'none'} strokeWidth={1.8} />
+                    </button>
+                    <button onClick={() => handleBuy(item.product!)}
+                      className="text-gray-700 hover:text-purple-600 transition">
+                      <ShoppingBag size={24} strokeWidth={1.8} />
+                    </button>
+                    <button onClick={() => setForwardingProduct(item.product!)}
+                      className="text-gray-700 hover:text-purple-600 transition">
+                      <Send size={23} strokeWidth={1.8} />
+                    </button>
+                  </div>
+
+                  {/* ── Likes count ── */}
+                  {likedItems.has(item.product.id) && (
+                    <p className="px-4 text-xs font-semibold text-gray-800 mt-0.5">
+                      A ti {Math.random() > 0.5 ? `y a ${Math.floor(Math.random() * 40 + 10)} personas más` : ''} les gusta esto
+                    </p>
+                  )}
+
+                  {/* ── Product info ── */}
+                  <div className="px-4 pt-1 pb-4">
+                    <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">{item.product.brand}</p>
+                    <p className="font-semibold text-gray-900 text-sm leading-snug">{item.product.name}</p>
+                    <p className="text-base font-bold text-gray-900 mt-0.5">{fmt(item.product.price)}</p>
+                    {item.product.note && (
+                      <p className="text-xs text-purple-500 mt-1 bg-purple-50 rounded-lg px-2 py-1 inline-block">💬 {item.product.note}</p>
+                    )}
+                    <button onClick={() => handleBuy(item.product!)}
+                      className="mt-3 w-full bg-purple-600 text-white py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+                      <ExternalLink size={15} /> Ver en tienda
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           ))}
@@ -666,37 +697,104 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
 }
 
 // ─── FRIEND WISH CARD (with Comprado button) ─────────────────────────────────
-function FriendWishCard({ product, onLike, onBuy }: {
+// buyerName: if set, this item is pre-bought by ANOTHER user (simulation).
+//            Only the actual buyer can undo; others see it as locked.
+function FriendWishCard({ product, onLike, onBuy, buyerName = null }: {
   product: Product;
   onLike: (p: Product) => void;
   onBuy: (p: Product) => void;
+  buyerName?: string | null;
 }) {
   const [liked, setLiked] = useState(false);
-  const [bought, setBought] = useState(false);
+  const [boughtByMe, setBoughtByMe] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
 
-  return (
-    <>
-      <div className={`bg-white rounded-2xl shadow-sm overflow-hidden border transition ${bought ? 'border-green-200' : 'border-gray-100'}`}>
-        <div className="relative">
-          <button onClick={() => setShowDetail(true)} className="w-full">
-            <img src={product.image} alt={product.name} className="w-full h-36 object-cover" />
-          </button>
-          {bought && (
-            <div className="absolute top-2 left-2">
-              <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                <Check size={9} /> Comprado
+  const boughtByOther = !!buyerName;
+  const isBought = boughtByOther || boughtByMe;
+
+  // ── Bought state: greyscale image + green overlay (old visual) ──
+  if (isBought) {
+    return (
+      <>
+        <div className="bg-gray-50 rounded-2xl border-2 border-green-200 overflow-hidden"
+          style={{ opacity: 0.82 }}>
+          <button onClick={() => setShowDetail(true)} className="w-full relative block">
+            <img src={product.image} alt={product.name}
+              className="w-full h-36 object-cover grayscale" />
+            <div className="absolute inset-0 bg-green-600/25 flex items-center justify-center">
+              <span className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
+                <Check size={12} />
+                {boughtByOther ? `${buyerName} lo compró` : 'Comprado por ti'}
               </span>
             </div>
-          )}
-          {!bought && (
-            <button
-              onClick={() => { setLiked(v => !v); onLike({ ...product, liked: !liked }); }}
-              className={`absolute top-2 right-2 p-1.5 rounded-full shadow ${liked ? 'bg-red-500 text-white' : 'bg-white text-gray-400'}`}>
-              <Heart size={14} fill={liked ? 'white' : 'none'} />
-            </button>
-          )}
+          </button>
+          <div className="p-2.5">
+            <p className="text-xs text-gray-400 font-medium truncate">{product.brand}</p>
+            <p className="text-xs font-semibold text-gray-500 leading-tight line-clamp-2">{product.name}</p>
+            {product.note && (
+              <p className="text-[10px] text-gray-400 mt-0.5 truncate">💬 {product.note}</p>
+            )}
+            <p className="text-sm font-bold text-gray-400 mt-0.5">{fmt(product.price)}</p>
+            {boughtByMe && (
+              <button onClick={() => setBoughtByMe(false)}
+                className="w-full mt-2 bg-gray-200 text-gray-600 text-xs py-1.5 rounded-lg font-medium transition hover:bg-gray-300">
+                Deshacer
+              </button>
+            )}
+            {boughtByOther && (
+              <p className="text-center text-[10px] text-gray-400 mt-2 italic">Solo {buyerName?.split(' ')[0]} puede deshacer</p>
+            )}
+          </div>
         </div>
+
+        {/* Detail sheet */}
+        {showDetail && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setShowDetail(false)}>
+            <div className="bg-white rounded-t-3xl w-full max-h-[85vh] overflow-y-auto pb-safe" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-3" />
+              <img src={product.image} alt={product.name} className="w-full h-52 object-contain bg-gray-50 px-4 grayscale" />
+              <div className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">
+                    ✓ {boughtByOther ? `Comprado por ${buyerName}` : 'Comprado por ti'}
+                  </span>
+                </div>
+                <p className="text-xs text-purple-600 font-medium capitalize">{product.brand}</p>
+                <p className="font-bold text-gray-800 text-lg leading-snug">{product.name}</p>
+                <p className="text-2xl font-extrabold text-gray-400 my-2">{fmt(product.price)}</p>
+                {product.note && (
+                  <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 mb-4">
+                    <p className="text-xs text-purple-500 font-semibold mb-1">Especificaciones del dueño:</p>
+                    <p className="text-sm text-purple-700">💬 {product.note}</p>
+                  </div>
+                )}
+                {boughtByMe && (
+                  <button onClick={() => { setBoughtByMe(false); setShowDetail(false); }}
+                    className="w-full bg-gray-100 text-gray-700 py-3 rounded-2xl font-semibold text-sm border border-gray-200">
+                    Deshacer compra
+                  </button>
+                )}
+                <button onClick={() => setShowDetail(false)} className="w-full text-gray-400 text-sm py-2 mt-2">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // ── Normal state ──
+  return (
+    <>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <button onClick={() => setShowDetail(true)} className="w-full relative block">
+          <img src={product.image} alt={product.name} className="w-full h-36 object-cover" />
+          <button
+            onClick={e => { e.stopPropagation(); setLiked(v => !v); onLike({ ...product, liked: !liked }); }}
+            className={`absolute top-2 right-2 p-1.5 rounded-full shadow ${liked ? 'bg-red-500 text-white' : 'bg-white text-gray-400'}`}>
+            <Heart size={14} fill={liked ? 'white' : 'none'} />
+          </button>
+        </button>
         <div className="p-2.5">
           <p className="text-xs text-purple-600 font-medium truncate">{product.brand}</p>
           <button onClick={() => setShowDetail(true)} className="w-full text-left">
@@ -706,32 +804,20 @@ function FriendWishCard({ product, onLike, onBuy }: {
             <p className="text-[10px] text-purple-500 mt-0.5 truncate">💬 {product.note}</p>
           )}
           <p className="text-sm font-bold text-gray-900 mt-0.5">{fmt(product.price)}</p>
-          {!bought ? (
-            <div className="flex gap-1.5 mt-2">
-              <button onClick={() => onBuy(product)}
-                className="flex-1 bg-purple-600 text-white text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
-                <ExternalLink size={11} /> Comprar
-              </button>
-              <button onClick={() => setBought(true)}
-                className="flex-1 bg-gray-100 border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
-                <ShoppingBag size={11} /> Marcar comprado
-              </button>
-            </div>
-          ) : (
-            <div className="mt-2 flex items-center gap-1.5">
-              <div className="flex-1 text-center text-xs text-green-600 font-medium bg-green-50 py-1.5 rounded-lg">
-                ✓ Ya lo compraste
-              </div>
-              <button onClick={() => setBought(false)}
-                className="text-xs text-gray-400 px-2 py-1.5 rounded-lg border border-gray-200 hover:text-gray-600 transition">
-                Deshacer
-              </button>
-            </div>
-          )}
+          <div className="flex gap-1.5 mt-2">
+            <button onClick={() => onBuy(product)}
+              className="flex-1 bg-purple-600 text-white text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
+              <ExternalLink size={11} /> Comprar
+            </button>
+            <button onClick={() => setBoughtByMe(true)}
+              className="flex-1 bg-gray-100 border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1">
+              <ShoppingBag size={11} /> Marcar comprado
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Wish detail bottom-sheet */}
+      {/* Detail sheet */}
       {showDetail && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setShowDetail(false)}>
           <div className="bg-white rounded-t-3xl w-full max-h-[85vh] overflow-y-auto pb-safe" onClick={e => e.stopPropagation()}>
@@ -747,22 +833,15 @@ function FriendWishCard({ product, onLike, onBuy }: {
                   <p className="text-sm text-purple-700">💬 {product.note}</p>
                 </div>
               )}
-              <div className="flex flex-col gap-2 mt-3">
+              <div className="flex flex-col gap-2 mt-2">
                 <button onClick={() => { onBuy(product); setShowDetail(false); }}
                   className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-3 rounded-2xl font-semibold text-sm">
                   <ExternalLink size={15} /> Comprar ahora
                 </button>
-                {!bought ? (
-                  <button onClick={() => { setBought(true); setShowDetail(false); }}
-                    className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3 rounded-2xl font-semibold text-sm border border-gray-200">
-                    <ShoppingBag size={15} /> Marcar como comprado
-                  </button>
-                ) : (
-                  <button onClick={() => { setBought(false); setShowDetail(false); }}
-                    className="w-full flex items-center justify-center gap-2 bg-green-50 text-green-700 py-3 rounded-2xl font-semibold text-sm border border-green-200">
-                    <Check size={15} /> Comprado — Deshacer
-                  </button>
-                )}
+                <button onClick={() => { setBoughtByMe(true); setShowDetail(false); }}
+                  className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3 rounded-2xl font-semibold text-sm border border-gray-200">
+                  <ShoppingBag size={15} /> Marcar como comprado
+                </button>
                 <button onClick={() => setShowDetail(false)}
                   className="w-full text-gray-400 text-sm py-2">Cerrar</button>
               </div>
@@ -797,8 +876,13 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
-  // Simulated data for this friend
-  const friendWishes = SAMSUNG_PRODUCTS.slice(0, 6).map((p, i) => ({ ...p, id: `fw${friend.id}_${i}` }));
+  // Simulated data for this friend — items 1 & 3 simulate pre-bought by other users
+  const SIMULATED_BUYERS = ['María G.', 'Sebastián R.'];
+  const friendWishes = SAMSUNG_PRODUCTS.slice(0, 6).map((p, i) => ({
+    ...p,
+    id: `fw${friend.id}_${i}`,
+    note: i === 0 ? 'Talla M, color negro' : i === 2 ? 'Con cargador incluido' : p.note,
+  }));
   const friendFunds: GroupFund[] = MY_GROUP_FUNDS.slice(0, 2).map((f, i) => ({
     ...f, id: `ff${friend.id}_${i}`, isOwner: false,
   }));
@@ -988,12 +1072,13 @@ function FriendProfileView({ friend, isFollowing, onFollow, onMessage, onBuy, on
       {/* ── Wishes tab — 2-col grid with ProductCard + Comprado ── */}
       {tab === 'wishes' && (
         <div className="grid grid-cols-2 gap-3 pt-3">
-          {friendWishes.map(p => (
+          {friendWishes.map((p, i) => (
             <FriendWishCard
               key={p.id}
               product={p}
               onLike={onLike}
               onBuy={onBuy}
+              buyerName={i === 1 ? SIMULATED_BUYERS[0] : i === 3 ? SIMULATED_BUYERS[1] : null}
             />
           ))}
         </div>
@@ -1291,10 +1376,11 @@ function getMutualFriends(target: UserType): UserType[] {
   return myFriends.slice(0, Math.min(count, 2));
 }
 
-function SearchFriendsScreen({ onNavigate, following, onFollow }: {
+function SearchFriendsScreen({ onNavigate, following, onFollow, onAddFriend }: {
   onNavigate: (screen: Screen) => void;
   following: Set<string>;
   onFollow: (id: string) => void;
+  onAddFriend?: (user: import('./types').User) => void;
 }) {
   const [query, setQuery] = useState('');
   const [selectedFriend, setSelectedFriend] = useState<UserType | null>(null);
@@ -1307,10 +1393,13 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
-  const sendRequest = async (id: string) => {
-    setPendingRequests(prev => new Set([...prev, id]));
-    onFollow(id);
-    showToast('Solicitud de amistad enviada ✓');
+  const sendRequest = async (targetId: string) => {
+    const targetUser = FRIENDS.find(f => f.id === targetId);
+    setPendingRequests(prev => new Set([...prev, targetId]));
+    setMyFriends(prev => new Set([...prev, targetId])); // immediately add as friend
+    onFollow(targetId);
+    if (targetUser) onAddFriend?.(targetUser); // propagate to App friendsList
+    showToast(`✓ Ahora sigues a ${targetUser?.name ?? ''}. Aparecerá en tus amigos.`);
     // Save to Supabase friendships table
     if (isSupabaseConfigured && supabase) {
       try {
@@ -1318,7 +1407,7 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
         if (session?.user) {
           await supabase.from('friendships').insert({
             requester_id: session.user.id,
-            addressee_id: id,
+            addressee_id: targetId,
             status: 'pending',
           });
         }
@@ -1327,9 +1416,11 @@ function SearchFriendsScreen({ onNavigate, following, onFollow }: {
   };
 
   const acceptRequest = async (id: string) => {
+    const targetUser = FRIENDS.find(f => f.id === id);
     setIncomingRequests(prev => prev.filter(r => r !== id));
     setMyFriends(prev => new Set([...prev, id]));
     onFollow(id);
+    if (targetUser) onAddFriend?.(targetUser);
     showToast('¡Ahora son amigos! 🎉');
     // Update friendship status in Supabase
     if (isSupabaseConfigured && supabase) {
@@ -1903,12 +1994,15 @@ function AddProductTab({ lists, onSaved }: {
 }
 
 // ─── PROFILE SCREEN ──────────────────────────────────────────────────────────
-function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraWishes }: {
+function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraWishes, walletBalance, onWalletCredit, onAddFeedItem }: {
   onNavigate: (screen: Screen) => void;
   currentUser: AppUser & { avatar: string; name: string };
   onLogout: () => void;
   onUserUpdate: (u: AppUser) => void;
   extraWishes?: Product[];
+  walletBalance?: number;
+  onWalletCredit?: (amount: number) => void;
+  onAddFeedItem?: (item: import('./types').FeedItem) => void;
 }) {
   type PTab = 'wishes' | 'funds' | 'add';
   const [tab, setTab] = useState<PTab>('wishes');
@@ -2331,7 +2425,11 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
                     className="p-1.5 text-gray-300 hover:text-purple-500 transition">
                     <Edit3 size={16} />
                   </button>
-                  {p.isGroupFund && <span className="text-sm">🎁</span>}
+                  <button
+                    onClick={() => { setWishes(prev => prev.filter(w => w.id !== p.id)); showToast('Deseo eliminado'); }}
+                    className="p-1.5 text-gray-200 hover:text-red-400 transition rounded-full">
+                    <X size={15} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -2342,11 +2440,34 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
       {/* Group Funds */}
       {tab === 'funds' && (
         <div className="space-y-4">
+          {funds.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <span className="text-5xl mb-4">💰</span>
+              <p className="text-gray-500 font-medium">No tienes fondos activos</p>
+              <p className="text-gray-400 text-sm mt-1">Crea un deseo como fondo grupal desde "➕ Agregar"</p>
+            </div>
+          )}
           {funds.map(fund => {
             const pct = Math.round((fund.currentAmount / fund.targetAmount) * 100);
             return (
               <div key={fund.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <img src={fund.product.image} alt={fund.product.name} className="w-full h-36 object-cover" />
+                <div className="relative">
+                  <img src={fund.product.image} alt={fund.product.name} className="w-full h-36 object-cover" />
+                  <button
+                    onClick={() => {
+                      if (!window.confirm(`¿Eliminar el fondo "${fund.name}"? ${fund.currentAmount > 0 ? `Los $${fund.currentAmount.toLocaleString('es-CL')} recaudados se acreditarán a tu cuenta.` : ''}`)) return;
+                      if (fund.currentAmount > 0) {
+                        onWalletCredit?.(fund.currentAmount);
+                        showToast(`💰 ${fmt(fund.currentAmount)} acreditados a tu cuenta`);
+                      } else {
+                        showToast('Fondo eliminado');
+                      }
+                      setFunds(prev => prev.filter(f => f.id !== fund.id));
+                    }}
+                    className="absolute top-2 right-2 bg-white/90 backdrop-blur text-red-500 p-1.5 rounded-full shadow hover:bg-red-50 transition">
+                    <X size={14} />
+                  </button>
+                </div>
                 <div className="p-4">
                   <p className="font-bold text-gray-800">{fund.name}</p>
                   <p className="text-xs text-gray-500 mb-3">{fund.product.name}</p>
@@ -2354,7 +2475,7 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
                     <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 mb-3">
-                    <span>{fmt(fund.currentAmount)}</span><span>Meta {fmt(fund.targetAmount)}</span>
+                    <span>{fmt(fund.currentAmount)} recaudados</span><span>Meta {fmt(fund.targetAmount)}</span>
                   </div>
                   <button onClick={() => setSelectedFund(fund)}
                     className="w-full border border-purple-200 text-purple-600 py-2 rounded-xl text-sm font-semibold">
@@ -2440,6 +2561,25 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
                 });
               } catch { /* handled gracefully */ }
             }
+            // Add to home feed so followers see it
+            onAddFeedItem?.({
+              id: 'feed_' + Date.now(),
+              user: {
+                id: currentUser.id,
+                name: currentUser.name,
+                lastName: '',
+                avatar: currentUser.avatar,
+                bio: currentUser.bio ?? '',
+                birthday: '01-01',
+                following: false,
+                followersCount: 165,
+                friendsCount: 87,
+                listsCount: 3,
+              },
+              action: 'added',
+              product,
+              timestamp: 'ahora',
+            });
             const dest = listId === 'wishes' ? 'Mis Deseos' : lists.find(l => l.id === listId)?.name ?? 'lista';
             showToast(`${product.isGroupFund ? '🎁 Fondo creado' : '⭐ Guardado'} en ${dest}`);
             setTab(product.isGroupFund ? 'funds' : 'wishes');
@@ -2671,6 +2811,9 @@ function App() {
   const [following, setFollowing] = useState<Set<string>>(new Set(FRIENDS.filter(f => f.following).map(f => f.id)));
   const [showNotifications, setShowNotifications] = useState(false);
   const [feedLikedWishes, setFeedLikedWishes] = useState<Product[]>([]);
+  const [customFeedItems, setCustomFeedItems] = useState<import('./types').FeedItem[]>([]);
+  const [walletBalance, setWalletBalance] = useState(345000);
+  const [friendsList, setFriendsList] = useState(FRIENDS);
 
   // Supabase session init
   useEffect(() => {
@@ -2837,11 +2980,26 @@ function App() {
             following={following}
             onFollow={onFollow}
             currentUserId={appUser?.id}
+            currentUser={appUser ?? undefined}
             onFeedLike={(p) => setFeedLikedWishes(prev => prev.find(x => x.id === p.id) ? prev : [p, ...prev])}
+            customFeedItems={customFeedItems}
+            walletBalance={walletBalance}
           />
         )}
         {screen === 'discover' && <DiscoverScreen />}
-        {screen === 'search' && <SearchFriendsScreen onNavigate={navigate} following={following} onFollow={onFollow} />}
+        {screen === 'search' && (
+          <SearchFriendsScreen
+            onNavigate={navigate}
+            following={following}
+            onFollow={onFollow}
+            onAddFriend={(user) => {
+              setFriendsList(prev => prev.find(f => f.id === user.id)
+                ? prev.map(f => f.id === user.id ? { ...f, following: true } : f)
+                : [{ ...user, following: true }, ...prev]);
+              setFollowing(prev => new Set([...prev, user.id]));
+            }}
+          />
+        )}
         {screen === 'messages' && <MessagingScreen />}
 
         {screen === 'profile' && (
@@ -2851,6 +3009,9 @@ function App() {
             onLogout={handleLogout}
             onUserUpdate={(u) => { setAppUser(u); setStoredCurrent(u); }}
             extraWishes={feedLikedWishes}
+            walletBalance={walletBalance}
+            onWalletCredit={(amount) => setWalletBalance(prev => prev + amount)}
+            onAddFeedItem={(item) => setCustomFeedItems(prev => [item, ...prev])}
           />
         )}
       </main>
