@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { extractProductHandler } from './api/extract-product.js';
+import { extractProductEnhancedHandler } from './api/extract-product-enhanced.js';
 import {
   instagramAuthHandler,
   instagramCallbackHandler,
@@ -26,6 +27,9 @@ app.get('/scrape', extractProductHandler);
 /** New clean route */
 app.get('/api/extract-product', extractProductHandler);
 
+/** Enhanced route — returns previousPrice, discount, category, availability, shortDescription */
+app.get('/api/extract-product-enhanced', extractProductEnhancedHandler);
+
 /** Instagram OAuth */
 app.get('/auth/instagram/status',   instagramStatusHandler);
 app.get('/auth/instagram',          instagramAuthHandler);
@@ -39,8 +43,9 @@ app.get('/health', (_req, res) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
   console.log(`\n🚀 GiftLoop scraper server  →  http://localhost:${PORT}`);
-  console.log(`   /scrape?url=...           (legacy)`);
-  console.log(`   /api/extract-product?url= (new)\n`);
+  console.log(`   /scrape?url=...                    (legacy)`);
+  console.log(`   /api/extract-product?url=          (básico)`);
+  console.log(`   /api/extract-product-enhanced?url= (con precio anterior, descuento, categoría)\n`);
 });
 
 server.on('error', (err: NodeJS.ErrnoException) => {

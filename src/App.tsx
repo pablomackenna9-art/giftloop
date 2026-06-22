@@ -161,31 +161,37 @@ function ProductCard({
 }) {
   const [liked, setLiked] = useState(product.liked);
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-3xl overflow-hidden" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
       <div className="relative">
-        <img src={product.image} alt={product.name} className="w-full h-40 object-cover" />
+        <img src={product.image} alt={product.name} className="w-full h-44 object-cover" />
         <button
           onClick={() => { setLiked(!liked); onLike({ ...product, liked: !liked }); }}
-          className={`absolute top-2 right-2 p-1.5 rounded-full shadow ${liked ? 'bg-red-500 text-white' : 'bg-white text-gray-400'}`}
+          className={`absolute top-3 right-3 p-2 rounded-2xl shadow-md backdrop-blur-sm transition-all ${liked ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-400'}`}
         >
-          <Heart size={16} fill={liked ? 'white' : 'none'} />
+          <Heart size={15} fill={liked ? 'white' : 'none'} />
         </button>
+        {product.price > 50000 && (
+          <div className="absolute top-3 left-3">
+            <span className="bg-white/90 backdrop-blur-sm text-purple-700 text-[10px] font-bold px-2 py-1 rounded-xl">{product.brand}</span>
+          </div>
+        )}
       </div>
-      <div className="p-3">
-        <p className="text-xs text-purple-600 font-medium">{product.brand}</p>
-        <p className="text-sm font-semibold text-gray-800 leading-tight">{product.name}</p>
-        <p className="text-base font-bold text-gray-900 mt-1">{fmt(product.price)}</p>
-        <div className="flex gap-2 mt-2">
+      <div className="p-3.5">
+        {product.price <= 50000 && <p className="text-[11px] text-purple-500 font-semibold mb-0.5">{product.brand}</p>}
+        <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">{product.name}</p>
+        <p className="text-base font-extrabold text-gray-900 mt-1.5">{fmt(product.price)}</p>
+        <div className="flex gap-2 mt-3">
           <button
             onClick={() => onBuy(product)}
-            className="flex-1 bg-purple-600 text-white text-xs py-1.5 rounded-lg font-medium flex items-center justify-center gap-1"
+            className="flex-1 text-white text-xs py-2 rounded-xl font-semibold flex items-center justify-center gap-1"
+            style={{ background: 'linear-gradient(135deg,#7C3AED,#8B5CF6)' }}
           >
             <ExternalLink size={12} /> Comprar
           </button>
           {onAddToList && !isOwner && (
             <button
               onClick={() => onAddToList(product)}
-              className="flex-1 border border-purple-200 text-purple-600 text-xs py-1.5 rounded-lg font-medium"
+              className="flex-1 border-2 border-purple-100 text-purple-600 text-xs py-2 rounded-xl font-semibold hover:bg-purple-50 transition"
             >
               + Mi lista
             </button>
@@ -476,7 +482,7 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
       {/* CENTER FEED */}
       <div className="flex-1 min-w-0">
         {/* Mobile Saldo */}
-        <div className="lg:hidden bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-4 text-white mb-4">
+        <div className="lg:hidden rounded-3xl p-4 text-white mb-4" style={{ background: 'linear-gradient(135deg,#6D28D9 0%,#7C3AED 50%,#4F46E5 100%)', boxShadow: '0 4px 20px rgba(124,58,237,0.35)' }}>
           <p className="text-purple-200 text-sm">Mi Saldo</p>
           <p className="text-2xl font-bold mb-3">{fmt(walletBalance ?? 345000)}</p>
           <div className="flex gap-2">
@@ -486,7 +492,7 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
         </div>
 
         {/* Birthdays */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+        <div className="bg-white rounded-3xl p-4 mb-4" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-gray-800 flex items-center gap-2"><Cake size={18} className="text-pink-500" /> Cumpleaños</h3>
             <button onClick={() => setSubView('birthdays_all')} className="text-xs text-purple-600 font-medium">Ver todo</button>
@@ -522,7 +528,7 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
         </div>
 
         {/* Events */}
-        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-4">
+        <div className="rounded-3xl p-4 mb-4" style={{ background: 'linear-gradient(135deg,#EEF2FF,#F5F3FF)', boxShadow: '0 2px 16px rgba(99,102,241,0.08)' }}>
           <h3 className="font-bold text-indigo-800 mb-3 flex items-center gap-2"><Calendar size={18} /> Invitaciones</h3>
           <div className="space-y-2">
             {EVENTS.filter(ev => {
@@ -548,7 +554,7 @@ function HomeScreen({ onNavigate, following, onFollow, currentUserId, onFeedLike
         </div>
 
         {/* ── Mobile: Personas que quizás conoces ── */}
-        <div className="lg:hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+        <div className="lg:hidden bg-white rounded-3xl p-4 mb-4" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
           <div className="flex items-center justify-between mb-3">
             <p className="font-bold text-gray-800 text-sm">Personas que quizás conoces</p>
             <button onClick={() => {}} className="text-xs text-purple-600">Ver todos</button>
@@ -1992,6 +1998,12 @@ function MessagingScreen({ forwardProduct }: { forwardProduct?: Product | null }
 type ScrapedProduct = {
   title: string; price: number | null; currency: string;
   imageUrl: string | null; store: string; sourceUrl: string;
+  // Campos del endpoint mejorado (pueden ser undefined si vienen del endpoint básico)
+  previousPrice?: number | null;
+  discount?: number | null;
+  category?: string | null;
+  availability?: 'in_stock' | 'out_of_stock' | 'unknown';
+  shortDescription?: string | null;
 };
 
 function AddProductTab({ lists, onSaved }: {
@@ -2039,16 +2051,35 @@ function AddProductTab({ lists, onSaved }: {
     const interval = setInterval(() => { i = (i + 1) % steps.length; setLoadingStep(steps[i]); }, 1800);
     try {
       const apiBase = import.meta.env['VITE_API_URL'] ?? '';
-      const res = await fetch(`${apiBase}/api/extract-product?url=${encodeURIComponent(url.trim())}`);
-      const json = await res.json();
+      const encodedUrl = encodeURIComponent(url.trim());
+
+      // Intentar primero el endpoint mejorado (precio anterior, descuento, categoría, disponibilidad)
+      // Si la tienda no está soportada aún, cae automáticamente al endpoint básico
+      let p: ScrapedProduct | null = null;
+      try {
+        const enhancedRes = await fetch(`${apiBase}/api/extract-product-enhanced?url=${encodedUrl}`);
+        const enhancedJson = await enhancedRes.json();
+        if (enhancedJson.ok) {
+          p = enhancedJson.data as ScrapedProduct;
+        }
+      } catch {
+        // El servidor mejorado no responde — usamos el básico
+      }
+
+      // Fallback al endpoint básico si el mejorado falló o no soporta esta tienda
+      if (!p) {
+        const res = await fetch(`${apiBase}/api/extract-product?url=${encodedUrl}`);
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error || 'Error desconocido');
+        p = json.data as ScrapedProduct;
+      }
+
       clearInterval(interval);
-      if (!json.ok) throw new Error(json.error || 'Error desconocido');
-      const p: ScrapedProduct = json.data;
       setScraped(p);
       setEditName(p.title || '');
       setEditPrice(p.price != null ? String(p.price) : '');
       setEditImg(p.imageUrl || '');
-      setEditNote('');
+      setEditNote(p.shortDescription ?? '');
       // sugerir fondo si precio > 100k
       setIsGroupFund((p.price ?? 0) > 100_000);
     } catch (e: unknown) {
@@ -2203,13 +2234,36 @@ function AddProductTab({ lists, onSaved }: {
               placeholder="Nombre del producto" />
 
             {/* Editable price */}
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-1">
               <span className="text-gray-400 text-sm">$</span>
               <input value={editPrice} onChange={e => setEditPrice(e.target.value.replace(/\D/g, ''))}
                 placeholder="Ingresa el precio"
                 className="flex-1 text-2xl font-bold text-gray-900 border-b border-transparent hover:border-purple-200 focus:border-purple-400 focus:outline-none transition" />
               {editPrice && (
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">{fmt(priceNum)}</span>
+              )}
+            </div>
+
+            {/* Precio anterior + descuento + disponibilidad (solo si vienen del endpoint mejorado) */}
+            <div className="flex flex-wrap items-center gap-2 mb-3 min-h-[20px]">
+              {scraped.previousPrice != null && scraped.previousPrice > (scraped.price ?? 0) && (
+                <span className="text-xs text-gray-400 line-through">{fmt(scraped.previousPrice)}</span>
+              )}
+              {scraped.discount != null && scraped.discount > 0 && (
+                <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full">
+                  -{scraped.discount}%
+                </span>
+              )}
+              {scraped.category && (
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full capitalize">
+                  {scraped.category}
+                </span>
+              )}
+              {scraped.availability === 'in_stock' && (
+                <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">● En stock</span>
+              )}
+              {scraped.availability === 'out_of_stock' && (
+                <span className="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded-full">● Sin stock</span>
               )}
             </div>
 
@@ -2275,7 +2329,7 @@ function AddProductTab({ lists, onSaved }: {
 }
 
 // ─── PROFILE SCREEN ──────────────────────────────────────────────────────────
-function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraWishes, walletBalance, onWalletCredit, onAddFeedItem }: {
+function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraWishes, walletBalance, onWalletCredit, onAddFeedItem, friendsList: propFriendsList }: {
   onNavigate: (screen: Screen) => void;
   currentUser: AppUser & { avatar: string; name: string };
   onLogout: () => void;
@@ -2284,7 +2338,11 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
   walletBalance?: number;
   onWalletCredit?: (amount: number) => void;
   onAddFeedItem?: (item: import('./types').FeedItem) => void;
+  friendsList?: import('./types').User[];
 }) {
+  // Use live friendsList from App state so accepted requests show immediately
+  const myFriends = (propFriendsList ?? FRIENDS).filter(f => f.following);
+
   type PTab = 'wishes' | 'funds' | 'add';
   const [tab, setTab] = useState<PTab>('wishes');
   const [editMode, setEditMode] = useState(false);
@@ -2471,43 +2529,51 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
   return (
     <>
     <div className="max-w-lg mx-auto">
-      {/* ── Instagram-style profile header ── */}
-      <div className="bg-white mb-0.5">
-        {/* Top row: pic + stats */}
-        <div className="flex items-center gap-4 px-4 pt-5 pb-3">
+      {/* ── Profile header with cover ── */}
+      <div className="bg-white mb-2 overflow-hidden rounded-b-3xl shadow-sm">
+        {/* Cover gradient */}
+        <div className="h-28 relative"
+          style={{ background: 'linear-gradient(135deg,#6D28D9 0%,#7C3AED 40%,#8B5CF6 70%,#A78BFA 100%)' }}>
+          {/* Decorative circles */}
+          <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-20" style={{ background: 'rgba(255,255,255,0.3)' }} />
+          <div className="absolute top-4 right-16 w-10 h-10 rounded-full opacity-15" style={{ background: 'rgba(255,255,255,0.4)' }} />
+        </div>
+
+        {/* Avatar row — overlaps the cover */}
+        <div className="flex items-end gap-4 px-4 -mt-11 pb-3">
           {/* Avatar with ring + tap to change */}
           <div className="relative flex-shrink-0">
-            <div className="w-20 h-20 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
-              <div className="w-full h-full rounded-full overflow-hidden bg-white p-0.5">
+            <div className="w-[84px] h-[84px] rounded-full p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-xl ring-[3px] ring-white">
+              <div className="w-full h-full rounded-full overflow-hidden bg-white p-[2px]">
                 <img src={currentUser.avatar} alt={currentUser.name}
                   className="w-full h-full rounded-full object-cover cursor-pointer"
                   onClick={() => fileInputRef.current?.click()} />
               </div>
             </div>
             <button onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center border-2 border-white">
+              className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
               <Plus size={12} className="text-white" />
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
 
           {/* Stats */}
-          <div className="flex-1 flex justify-around">
+          <div className="flex-1 flex justify-around pb-1">
             {([
-              [String(FRIENDS.filter(f => f.following).length + (extraWishes?.length ?? 0 > 0 ? 0 : 0)), 'amigos', () => setShowMyFriendsList(true)],
+              [String(myFriends.length), 'amigos', () => setShowMyFriendsList(true)],
               ['165', 'seguidores', () => setShowMyFriendsList(true)],
               [String(wishes.length), 'deseos', null],
               [String(funds.length), 'fondos', null],
             ] as [string, string, (() => void) | null][]).map(([n, label, action]) => (
               action ? (
-                <button key={label} onClick={action} className="text-center">
-                  <p className="font-bold text-gray-900 text-lg leading-tight">{n}</p>
-                  <p className="text-xs text-gray-500 underline decoration-dotted">{label}</p>
+                <button key={label} onClick={action} className="text-center px-1">
+                  <p className="font-extrabold text-gray-900 text-xl leading-tight">{n}</p>
+                  <p className="text-[11px] text-gray-400 font-medium underline decoration-dotted underline-offset-2">{label}</p>
                 </button>
               ) : (
-                <div key={label} className="text-center">
-                  <p className="font-bold text-gray-900 text-lg leading-tight">{n}</p>
-                  <p className="text-xs text-gray-500">{label}</p>
+                <div key={label} className="text-center px-1">
+                  <p className="font-extrabold text-gray-900 text-xl leading-tight">{n}</p>
+                  <p className="text-[11px] text-gray-400 font-medium">{label}</p>
                 </div>
               )
             ))}
@@ -2535,21 +2601,21 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
             </div>
           ) : (
             <>
-              <p className="font-bold text-gray-900 text-sm">{profileName}</p>
-              <p className="text-xs text-gray-400">@{(currentUser as AppUser & {username?:string}).username ?? 'usuario'}</p>
-              {profileBio && <p className="text-xs text-gray-600 mt-1">{profileBio}</p>}
+              <p className="font-extrabold text-gray-900 text-base">{profileName}</p>
+              <p className="text-xs text-gray-400 font-medium">@{(currentUser as AppUser & {username?:string}).username ?? 'usuario'}</p>
+              {profileBio && <p className="text-sm text-gray-600 mt-1 leading-snug">{profileBio}</p>}
             </>
           )}
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-2 px-4 pb-2">
+        <div className="flex gap-2 px-4 pb-4">
           <button onClick={() => setEditMode(v => !v)}
-            className="flex-1 border border-gray-300 text-gray-800 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-50 transition">
+            className="flex-1 bg-gray-100 text-gray-800 py-2 rounded-xl text-sm font-semibold hover:bg-gray-200 transition">
             {editMode ? 'Cancelar' : 'Editar perfil'}
           </button>
           <button onClick={() => setShowEventForm(v => !v)}
-            className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition border flex items-center justify-center gap-1 ${showEventForm ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-300 text-gray-800 hover:bg-gray-50'}`}>
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-1.5 ${showEventForm ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}>
             <Calendar size={13} /> Crear evento
           </button>
         </div>
@@ -2634,32 +2700,37 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
         {lists.length > 0 && (
           <div className="flex gap-4 px-4 pb-4 overflow-x-auto hide-scrollbar">
             {lists.map(list => (
-              <button key={list.id} onClick={() => setSelectedList(list)} className="flex flex-col items-center gap-1 flex-shrink-0">
-                <div className="w-14 h-14 rounded-full border-2 border-gray-200 flex items-center justify-center bg-gray-50 text-2xl">
-                  {list.emoji}
+              <button key={list.id} onClick={() => setSelectedList(list)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                <div className="w-15 h-15 p-[2px] rounded-full"
+                  style={{ background: 'linear-gradient(135deg,#F59E0B,#EC4899,#7C3AED)' }}>
+                  <div className="w-full h-full rounded-full border-2 border-white flex items-center justify-center bg-gray-50 text-2xl"
+                    style={{ width: '52px', height: '52px' }}>
+                    {list.emoji}
+                  </div>
                 </div>
-                <span className="text-[10px] text-gray-600 w-14 text-center truncate">{list.name}</span>
+                <span className="text-[10px] text-gray-600 font-medium w-14 text-center truncate">{list.name}</span>
               </button>
             ))}
-            <button onClick={() => { setShowNewList(true); }} className="flex flex-col items-center gap-1 flex-shrink-0">
-              <div className="w-14 h-14 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-                <Plus size={20} className="text-gray-400" />
+            <button onClick={() => { setShowNewList(true); }} className="flex flex-col items-center gap-1.5 flex-shrink-0">
+              <div className="w-[56px] h-[56px] rounded-full border-2 border-dashed border-purple-200 flex items-center justify-center bg-purple-50/50">
+                <Plus size={20} className="text-purple-300" />
               </div>
-              <span className="text-[10px] text-gray-400 w-14 text-center">Nueva</span>
+              <span className="text-[10px] text-purple-400 font-medium w-14 text-center">Nueva</span>
             </button>
           </div>
         )}
 
         {/* Tab bar — deseos / fondos / add */}
-        <div className="flex border-t border-gray-200">
+        <div className="flex border-t border-gray-100 bg-white">
           {([
-            ['wishes', '⊞'],
-            ['funds', '💰'],
-            ['add', '＋'],
-          ] as [PTab, string][]).map(([key, icon]) => (
+            ['wishes', '⊞', 'Deseos'],
+            ['funds', '💰', 'Fondos'],
+            ['add', '＋', 'Agregar'],
+          ] as [PTab, string, string][]).map(([key, icon, lbl]) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 py-3 text-base transition border-t-2 ${tab === key ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400'}`}>
-              {icon}
+              className={`flex-1 py-3 text-xs font-semibold transition border-t-2 flex flex-col items-center gap-0.5 ${tab === key ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-400'}`}>
+              <span className="text-base">{icon}</span>
+              <span>{lbl}</span>
             </button>
           ))}
         </div>
@@ -2677,7 +2748,7 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
         ) : (
           <div className="space-y-3 pt-3">
             {wishes.map(p => (
-              <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex gap-0">
+              <div key={p.id} className="bg-white rounded-2xl overflow-hidden flex gap-0" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
                 {/* Image */}
                 <button onClick={() => setSelectedWish(p)} className="flex-shrink-0 w-24 h-24 bg-gray-50 overflow-hidden">
                   <img src={p.image} alt={p.name} className="w-full h-full object-cover"
@@ -2686,9 +2757,9 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
                 {/* Info */}
                 <div className="flex-1 p-3 min-w-0">
                   <button onClick={() => setSelectedWish(p)} className="w-full text-left">
-                    <p className="text-xs text-purple-600 font-medium capitalize truncate">{p.brand}</p>
+                    <p className="text-[11px] text-purple-500 font-semibold capitalize truncate">{p.brand}</p>
                     <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">{p.name}</p>
-                    <p className="text-base font-bold text-gray-900 mt-0.5">{p.price > 0 ? fmt(p.price) : '—'}</p>
+                    <p className="text-base font-extrabold text-gray-900 mt-0.5">{p.price > 0 ? fmt(p.price) : '—'}</p>
                   </button>
                   {p.note && (
                     <p className="text-xs text-purple-500 mt-1 truncate">💬 {p.note}</p>
@@ -2884,7 +2955,7 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
     {/* ── My friends list sheet ── */}
     {showMyFriendsList && (
       <FriendsListSheet
-        friends={FRIENDS.filter(f => f.following)}
+        friends={myFriends}
         title="Mis Amigos"
         onSelectFriend={(f) => { setShowMyFriendsList(false); setViewingFriendFromProfile(f); }}
         onClose={() => setShowMyFriendsList(false)}
@@ -2950,21 +3021,32 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
 function Navigation({ current, onNavigate }: { current: Screen; onNavigate: (s: Screen) => void }) {
   const items: { screen: Screen; icon: React.ReactNode; label: string }[] = [
-    { screen: 'home', icon: <Home size={22} />, label: 'Inicio' },
-    { screen: 'discover', icon: <Search size={22} />, label: 'Descubrir' },
-    { screen: 'search', icon: <Users size={22} />, label: 'Amigos' },
-    { screen: 'messages', icon: <MessageCircle size={22} />, label: 'Mensajes' },
-    { screen: 'profile', icon: <User size={22} />, label: 'Perfil' },
+    { screen: 'home',     icon: <Home size={21} />,          label: 'Inicio' },
+    { screen: 'discover', icon: <Search size={21} />,        label: 'Descubrir' },
+    { screen: 'search',   icon: <Users size={21} />,         label: 'Amigos' },
+    { screen: 'messages', icon: <MessageCircle size={21} />, label: 'Mensajes' },
+    { screen: 'profile',  icon: <User size={21} />,          label: 'Perfil' },
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center py-2 z-40 shadow-lg">
-      {items.map(({ screen, icon, label }) => (
-        <button key={screen} onClick={() => onNavigate(screen)}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition ${current === screen ? 'text-purple-600' : 'text-gray-400'}`}>
-          {icon}
-          <span className="text-xs font-medium">{label}</span>
-        </button>
-      ))}
+    <nav className="fixed bottom-0 left-0 right-0 z-40"
+         style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(16px)', boxShadow: '0 -1px 0 rgba(0,0,0,0.06), 0 -4px 20px rgba(124,58,237,0.06)' }}>
+      <div className="flex justify-around items-center px-1 py-2 max-w-lg mx-auto">
+        {items.map(({ screen, icon, label }) => {
+          const active = current === screen;
+          return (
+            <button key={screen} onClick={() => onNavigate(screen)}
+              className="flex flex-col items-center gap-0.5 relative px-3 py-1.5 rounded-2xl transition-all duration-200"
+              style={active ? { color: '#7C3AED' } : { color: '#9CA3AF' }}>
+              {active && (
+                <span className="absolute inset-0 rounded-2xl"
+                  style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(139,92,246,0.08))' }} />
+              )}
+              <span className="relative">{icon}</span>
+              <span className={`relative text-[10px] font-semibold tracking-wide`}>{label}</span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }
@@ -3268,15 +3350,15 @@ function App() {
   if (!appUser) return <AuthScreen onAuth={handleAuth} />;
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="min-h-screen bg-[#F3F2F8]" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* TOP BAR */}
-      <header className="sticky top-0 bg-white border-b border-gray-200 z-30 shadow-sm">
+      <header className="sticky top-0 bg-white/90 backdrop-blur-md z-30 shadow-[0_1px_12px_rgba(124,58,237,0.08)]">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <button onClick={() => navigate('home')} className="flex items-center gap-2 hover:opacity-80 transition">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-violet-500 rounded-xl flex items-center justify-center shadow-sm shadow-purple-300">
               <Gift size={16} className="text-white" />
             </div>
-            <span className="font-extrabold text-gray-800 text-lg tracking-tight">GiftLoop</span>
+            <span className="font-extrabold bg-gradient-to-r from-purple-700 to-violet-500 bg-clip-text text-transparent text-lg tracking-tight">GiftLoop</span>
           </button>
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -3369,6 +3451,7 @@ function App() {
             walletBalance={walletBalance}
             onWalletCredit={(amount) => setWalletBalance(prev => prev + amount)}
             onAddFeedItem={(item) => setCustomFeedItems(prev => [item, ...prev])}
+            friendsList={friendsList}
           />
         )}
       </main>
