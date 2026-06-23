@@ -2529,21 +2529,13 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
   return (
     <>
     <div className="max-w-lg mx-auto">
-      {/* ── Profile header with cover ── */}
+      {/* ── Profile header ── */}
       <div className="bg-white mb-2 overflow-hidden rounded-b-3xl shadow-sm">
-        {/* Cover gradient */}
-        <div className="h-28 relative"
-          style={{ background: 'linear-gradient(135deg,#6D28D9 0%,#7C3AED 40%,#8B5CF6 70%,#A78BFA 100%)' }}>
-          {/* Decorative circles */}
-          <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-20" style={{ background: 'rgba(255,255,255,0.3)' }} />
-          <div className="absolute top-4 right-16 w-10 h-10 rounded-full opacity-15" style={{ background: 'rgba(255,255,255,0.4)' }} />
-        </div>
-
-        {/* Avatar row — overlaps the cover */}
-        <div className="flex items-end gap-4 px-4 -mt-11 pb-3">
+        {/* Avatar row */}
+        <div className="flex items-center gap-4 px-4 pt-5 pb-3">
           {/* Avatar with ring + tap to change */}
           <div className="relative flex-shrink-0">
-            <div className="w-[84px] h-[84px] rounded-full p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-xl ring-[3px] ring-white">
+            <div className="w-[84px] h-[84px] rounded-full p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-lg">
               <div className="w-full h-full rounded-full overflow-hidden bg-white p-[2px]">
                 <img src={currentUser.avatar} alt={currentUser.name}
                   className="w-full h-full rounded-full object-cover cursor-pointer"
@@ -2558,7 +2550,7 @@ function ProfileScreen({ onNavigate, currentUser, onLogout, onUserUpdate, extraW
           </div>
 
           {/* Stats */}
-          <div className="flex-1 flex justify-around pb-1">
+          <div className="flex-1 flex justify-around">
             {([
               [String(myFriends.length), 'amigos', () => setShowMyFriendsList(true)],
               ['165', 'seguidores', () => setShowMyFriendsList(true)],
