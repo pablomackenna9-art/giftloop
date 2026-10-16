@@ -8,9 +8,9 @@ import type { FollowStatus } from '../components/data';
 const ALL_USERS = [
   ...FRIENDS_LIST,
   ...SUGGESTED_FRIENDS.filter(s => !FRIENDS_LIST.some(f => f.id === s.id)),
-  { id: 'user_ana', name: 'Ana Martínez', username: 'ana.mtz', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop', mutual: 2 },
-  { id: 'user_pedro', name: 'Pedro Gómez', username: 'pedro_g', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop', mutual: 0 },
-  { id: 'user_lucia', name: 'Lucía Torres', username: 'lu_torres', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop', mutual: 1 },
+  { id: 'user_ana', name: 'Ana Martínez', username: 'ana.mtz', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop', mutual: 2, daysUntil: 90, birthday: '' },
+  { id: 'user_pedro', name: 'Pedro Gómez', username: 'pedro_g', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop', mutual: 0, daysUntil: 90, birthday: '' },
+  { id: 'user_lucia', name: 'Lucía Torres', username: 'lu_torres', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop', mutual: 1, daysUntil: 90, birthday: '' },
 ];
 
 type Props = {
@@ -93,7 +93,7 @@ export function FriendsScreen({ onBack, followStatus, onFollow, onAccept, onReje
             </div>
           ) : (
             <div className="flex flex-col gap-1 mt-3">
-              <SectionLabel>RESULTADOS · {filtered.length}</SectionLabel>
+              <SectionLabel>{`RESULTADOS · ${filtered.length}`}</SectionLabel>
               {filtered.map(u => (
                 <div key={u.id} className="flex items-center gap-3 py-3 border-b border-line">
                   <button onClick={() => onNavigate('friend', { ...u, cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=200&fit=crop', friendCount: 24, bio: '', likes: [] })}
@@ -122,7 +122,7 @@ export function FriendsScreen({ onBack, followStatus, onFollow, onAccept, onReje
           {/* Pending requests */}
           {requests.length > 0 && (
             <div className="flex flex-col gap-3">
-              <SectionLabel>SOLICITUDES · {requests.length}</SectionLabel>
+              <SectionLabel>{`SOLICITUDES · ${requests.length}`}</SectionLabel>
               {requests.map(r => (
                 <div key={r.id} className="bg-white rounded-18 p-3.5 flex items-center gap-3"
                   style={{ border: '1px solid #EAE2D6' }}>
@@ -173,7 +173,7 @@ export function FriendsScreen({ onBack, followStatus, onFollow, onAccept, onReje
           {/* My friends */}
           {friends.length > 0 && (
             <div className="flex flex-col gap-3">
-              <SectionLabel>MIS AMIGOS · {friends.length}</SectionLabel>
+              <SectionLabel>{`MIS AMIGOS · ${friends.length}`}</SectionLabel>
               {friends.map(f => (
                 <div key={f.id} className="flex items-center gap-3">
                   <button onClick={() => onNavigate('friend', f)}

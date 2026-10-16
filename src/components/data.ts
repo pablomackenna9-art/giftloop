@@ -16,6 +16,7 @@ export type Friend = {
   location?: string; friendCount?: number;
   likes?: string[]; avoid?: string;
   sizeclothes?: string; sizeshoes?: string; colors?: string;
+  mutual?: number;
 };
 
 export type Wish = {
@@ -106,13 +107,13 @@ export const MESSAGES = [
   { id: 'tomas', name: 'Tomás', last: '¿Qué vas a regalar?', time: 'Mar', unread: 1, avatar: PH('1507003211169-0a1dd7228f2d', 52, 52) },
 ];
 
-export const FRIEND_REQUESTS = [
+export const FRIEND_REQUESTS: Array<{ id: string; name: string; username: string; avatar: string; mutual: number }> = [
   { id: 'fr1', name: 'Martina López', username: 'martinal', avatar: PH('1487412720507-e7ab37603c6f', 44, 44), mutual: 3 },
   { id: 'fr2', name: 'Diego Soto', username: 'diegosoto', avatar: PH('1539571696357-aaad8f8a5d3f', 44, 44), mutual: 1 },
 ];
 
-export const SUGGESTED_FRIENDS = [
-  { id: 'sf1', name: 'Pilar Muñoz', username: 'pilarm', avatar: PH('1488426756544-f01ad0be432c', 44, 44), mutual: 5 },
-  { id: 'sf2', name: 'Matías Torres', username: 'matiast', avatar: PH('1500648767791-00dcc994a43e', 44, 44), mutual: 2 },
-  { id: 'sf3', name: 'Javiera Pérez', username: 'javi', avatar: PH('1494790108377-be9c29b29330', 44, 44), mutual: 4 },
+export const SUGGESTED_FRIENDS: Friend[] = [
+  { id: 'sf1', name: 'Pilar Muñoz', username: 'pilarm', avatar: PH('1488426756544-f01ad0be432c', 44, 44), mutual: 5, daysUntil: 90, birthday: '' },
+  { id: 'sf2', name: 'Matías Torres', username: 'matiast', avatar: PH('1500648767791-00dcc994a43e', 44, 44), mutual: 2, daysUntil: 90, birthday: '' },
+  { id: 'sf3', name: 'Javiera Pérez', username: 'javi', avatar: PH('1494790108377-be9c29b29330', 44, 44), mutual: 4, daysUntil: 90, birthday: '' },
 ];
