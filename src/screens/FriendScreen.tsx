@@ -32,32 +32,46 @@ export function FriendScreen({
 
   return (
     <div className="min-h-screen bg-cream pb-20">
-      {/* Cover */}
-      <div className="relative" style={{ height: 200 }}>
-        <img src={friend.cover} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,.15) 0%, transparent 60%)' }} />
+      {/* Header bar */}
+      <div className="flex items-center gap-3 px-4 pt-5 pb-2">
         <button onClick={onBack}
-          className="absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(250,247,242,.92)' }}>
+          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(48,34,56,.08)' }}>
           <ChevronLeft size={20} className="text-ink" />
         </button>
-        <span className="absolute top-4 right-4 bg-coral text-ink text-[13px] font-bold px-3 py-1.5 rounded-20">
-          Cumple en 6 días
-        </span>
+        <h2 className="font-display text-[17px] font-[700] text-ink truncate flex-1">{friend.name}</h2>
+        {friend.daysUntil <= 30 && (
+          <span className="bg-coral text-ink text-[13px] font-bold px-3 py-1.5 rounded-20 flex-shrink-0">
+            En {friend.daysUntil} días
+          </span>
+        )}
       </div>
 
       {/* Content */}
-      <div className="px-5 flex flex-col" style={{ marginTop: -44, gap: 14 }}>
-        {/* Avatar row */}
-        <div className="flex items-end justify-between">
-          <img src={friend.avatar} alt="" className="w-[96px] h-[96px] rounded-full object-cover border-[5px] border-cream" />
+      <div className="px-5 flex flex-col" style={{ gap: 14, paddingTop: 8 }}>
+        {/* Avatar + stats row */}
+        <div className="flex items-center gap-4">
+          <img src={friend.avatar} alt="" className="w-[84px] h-[84px] rounded-full object-cover flex-shrink-0"
+            style={{ border: '3px solid #E2D8CB' }} />
+          <div className="flex gap-4 flex-1">
+            {[
+              { val: friend.friendCount ?? 48, label: 'amigos' },
+              { val: friend.mutual ?? 6, label: 'en común' },
+              { val: 2, label: 'listas' },
+            ].map(s => (
+              <div key={s.label} className="flex flex-col items-center flex-1">
+                <span className="font-display text-[20px] font-[800] text-ink leading-none">{s.val}</span>
+                <span className="text-[11px] text-ink-muted mt-0.5">{s.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Name & bio */}
         <div>
-          <h1 className="font-display text-[28px] font-[800] tracking-[-0.02em] text-ink leading-none">{friend.name}</h1>
-          <p className="text-[13px] text-ink-muted mt-1">@{friend.username} · {friend.location} · {friend.friendCount} amigos</p>
-          <p className="text-[14px] text-ink mt-2 leading-snug">{friend.bio}</p>
+          <h1 className="font-display text-[24px] font-[800] tracking-[-0.02em] text-ink leading-none">{friend.name}</h1>
+          <p className="text-[13px] text-ink-muted mt-0.5">@{friend.username}{friend.location ? ` · ${friend.location}` : ''}</p>
+          {friend.bio && <p className="text-[14px] text-ink mt-1.5 leading-snug">{friend.bio}</p>}
         </div>
 
         {/* Action buttons */}
