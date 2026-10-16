@@ -17,21 +17,44 @@ export function HomeScreen({ currentUser, onNavigate }: Props) {
 
   const heroFriend = CAMILA;
 
+  const today = new Date();
+  const dayName = today.toLocaleDateString('es-CL', { weekday: 'long' });
+  const dateStr = `${today.getDate()} de ${today.toLocaleDateString('es-CL', { month: 'long' })}`;
+
   return (
-    <div className="flex flex-col pb-[120px]" style={{ gap: 28, paddingTop: 8 }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-5">
-        <div>
-          <h1 className="font-display text-[24px] font-[800] tracking-[-0.02em] text-ink">GiftLoop</h1>
-          <p className="text-[13px] text-ink-muted">Hola, {currentUser.name.split(' ')[0]}</p>
+    <div className="flex flex-col pb-[120px] lg:pb-8" style={{ gap: 28, paddingTop: 8 }}>
+      {/* Header — mobile: logo + icons; desktop: date + greeting + search */}
+      <div className="px-5">
+        {/* Mobile header */}
+        <div className="flex items-center justify-between lg:hidden">
+          <div>
+            <h1 className="font-display text-[24px] font-[800] tracking-[-0.02em] text-ink">GiftLoop</h1>
+            <p className="text-[13px] text-ink-muted">Hola, {currentUser.name.split(' ')[0]}</p>
+          </div>
+          <div className="flex gap-2">
+            <IconButton onClick={() => onNavigate('friends')} badge="2">
+              <Users size={20} strokeWidth={1.9} className="text-ink" />
+            </IconButton>
+            <IconButton onClick={() => onNavigate('messages')} badge="3">
+              <MessageCircle size={20} strokeWidth={1.9} className="text-ink" />
+            </IconButton>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <IconButton onClick={() => onNavigate('friends')} badge="2">
-            <Users size={20} strokeWidth={1.9} className="text-ink" />
-          </IconButton>
-          <IconButton onClick={() => onNavigate('messages')} badge="3">
-            <MessageCircle size={20} strokeWidth={1.9} className="text-ink" />
-          </IconButton>
+        {/* Desktop header */}
+        <div className="hidden lg:flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[13px] text-ink-muted capitalize">{dayName} {dateStr}</p>
+            <h1 className="font-display text-[28px] font-[800] tracking-[-0.02em] text-ink leading-tight">
+              Hola, {currentUser.name.split(' ')[0]}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3 h-11 bg-white rounded-16 px-4 flex-1 max-w-[240px]"
+            style={{ border: '1.5px solid #E2D8CB' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7D90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <span className="text-[13px] text-ink-muted flex-1">Busca amigos, listas o ideas</span>
+          </div>
         </div>
       </div>
 

@@ -219,6 +219,91 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
   );
 }
 
+// ─── RIGHT PANEL (desktop only) ──────────────────────────────────────────────
+import { FRIENDS_LIST } from './components/data';
+
+function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavigate: (s: string, d?: unknown) => void }) {
+  const upcoming = FRIENDS_LIST.filter(f => f.daysUntil <= 60).slice(0, 4);
+  return (
+    <aside className="hidden lg:flex flex-col gap-4 w-[260px] flex-shrink-0 sticky top-8 h-fit">
+      {/* Tus regalos en curso */}
+      <div className="bg-white rounded-20 p-4 border border-line">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[13px] font-bold text-ink">Tus regalos en curso</p>
+          <button className="text-[12px] text-coral font-semibold">Solo tú los ves</button>
+        </div>
+        {[
+          { name: 'Audífonos · Sofía', sub: 'Reservado · falta comprar', btn: 'Reserva', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=40&h=40&fit=crop' },
+          { name: 'Bicicleta · Sofía', sub: 'Organiza · cierra el martes', btn: 'Aporta$te', img: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?w=40&h=40&fit=crop' },
+        ].map(g => (
+          <div key={g.name} className="flex items-center gap-2.5 py-2.5 border-t border-line">
+            <img src={g.img} alt="" className="w-9 h-9 rounded-10 object-cover flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold text-ink truncate">{g.name}</p>
+              <p className="text-[11px] text-ink-muted truncate">{g.sub}</p>
+            </div>
+            <button className="text-[11px] font-bold text-coral flex-shrink-0">{g.btn}</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Se vienen */}
+      <div className="bg-white rounded-20 p-4 border border-line">
+        <p className="text-[13px] font-bold text-ink mb-3">Se vienen</p>
+        <div className="flex flex-col gap-2">
+          {upcoming.map(f => {
+            const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+            const d = new Date(); d.setDate(d.getDate() + f.daysUntil);
+            const mon = months[d.getMonth()]; const day = d.getDate();
+            return (
+              <button key={f.id} onClick={() => onNavigate('friend', f)} className="flex items-center gap-2.5 hover:bg-sand -mx-1 px-1 rounded-10 py-1 transition-colors">
+                <div className="w-9 h-9 rounded-10 bg-sand flex flex-col items-center justify-center flex-shrink-0">
+                  <span className="text-[9px] font-bold text-coral leading-none">{mon}</span>
+                  <span className="text-[14px] font-bold text-ink leading-none">{day}</span>
+                </div>
+                <img src={f.avatar} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold text-ink truncate">{f.name.split(' ')[0]}</p>
+                </div>
+                <p className="text-[11px] text-ink-muted flex-shrink-0">en {f.daysUntil} días</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Ideas para tu lista */}
+      <div className="bg-white rounded-20 p-4 border border-line">
+        <p className="text-[13px] font-bold text-ink mb-3">Ideas para tu lista</p>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { name: 'Zapatillas running', price: '$64.990', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=80&fit=crop' },
+            { name: 'Pack de novelas', price: '$32.990', img: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=100&h=80&fit=crop' },
+          ].map(i => (
+            <div key={i.name} className="rounded-14 overflow-hidden bg-sand">
+              <img src={i.img} alt="" className="w-full h-[60px] object-cover" />
+              <div className="p-2">
+                <p className="text-[11px] font-semibold text-ink leading-tight">{i.name}</p>
+                <p className="text-[11px] font-bold text-coral">{i.price}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Saldo */}
+      <div className="bg-white rounded-20 p-4 border border-line flex items-center justify-between">
+        <div>
+          <p className="text-[11px] text-ink-muted font-medium">Saldo recibido</p>
+          <p className="text-[18px] font-bold text-ink">$42.500</p>
+        </div>
+        <button className="h-9 px-4 rounded-12 text-[13px] font-bold text-cream"
+          style={{ background: '#302238' }}>Revisar</button>
+      </div>
+    </aside>
+  );
+}
+
 // ─── APP ──────────────────────────────────────────────────────────────────────
 type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends' | 'chat';
 const NAV_TABS: NavTab[] = ['home', 'explore', 'activity', 'profile'];
@@ -368,33 +453,38 @@ function App() {
   // Chat data for 'chat' screen
   const chatTarget = screenData as { userId: string; name: string; avatar: string } | null;
 
+  const friendId = (screenData as Friend)?.id ?? 'camila';
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-cream">
-        {/* ─── Desktop layout ──────────────────────────────────────────── */}
-        <div className="lg:flex lg:max-w-[1080px] lg:mx-auto lg:px-8 lg:gap-10 lg:py-8">
 
-          {/* Sidebar (desktop only, only on main tab screens) */}
-          {showNav && (
-            <SidebarNav active={activeTab} onChange={(tab) => navigate(tab)} onNavigate={navigate} />
-          )}
+        {/* ─── Desktop layout (≥1024px): always sidebar + content + right panel ── */}
+        <div className="lg:flex lg:max-w-[1100px] lg:mx-auto lg:px-6 lg:gap-8 lg:py-8">
+
+          {/* Sidebar — always visible on desktop */}
+          <div className="hidden lg:block">
+            <SidebarNav
+              active={activeTab}
+              onChange={(tab) => navigate(tab)}
+              onNavigate={navigate}
+              currentScreen={screen}
+            />
+          </div>
 
           {/* Main content */}
-          <main className="flex-1 min-w-0 lg:max-w-[520px]">
-            {/* ─── Tab screens ─────────────────────────────────────── */}
+          <main className="flex-1 min-w-0 lg:max-w-[540px]">
             {screen === 'home' && <HomeScreen currentUser={currentUser} onNavigate={navigate} />}
             {screen === 'explore' && <ExploreScreen onNavigate={navigate} />}
             {screen === 'activity' && <ActivityScreen onNavigate={navigate} />}
             {screen === 'profile' && <ProfileScreen currentUser={currentUser} onNavigate={navigate} onLogout={handleLogout} />}
-
-            {/* ─── Secondary screens ───────────────────────────────── */}
             {screen === 'friend' && (
               <FriendScreen
                 friend={screenData as Friend | undefined}
                 onBack={goBack}
                 onNavigate={navigate}
-                followStatus={followStatus[(screenData as Friend)?.id ?? 'camila'] ?? 'friends'}
-                onFollow={() => handleFollow((screenData as Friend)?.id ?? 'camila')}
+                followStatus={followStatus[friendId] ?? 'friends'}
+                onFollow={() => handleFollow(friendId)}
               />
             )}
             {screen === 'wish' && <WishScreen wish={screenData as Wish | undefined} onBack={goBack} onNavigate={navigate} />}
@@ -402,11 +492,7 @@ function App() {
             {screen === 'add' && <AddScreen onBack={goBack} onNavigate={navigate} />}
             {screen === 'add-exp' && <AddScreen onBack={goBack} onNavigate={navigate} isExperience />}
             {screen === 'messages' && (
-              <MessagesScreen
-                onBack={goBack}
-                onNavigate={navigate}
-                conversations={conversations}
-              />
+              <MessagesScreen onBack={goBack} onNavigate={navigate} conversations={conversations} />
             )}
             {screen === 'chat' && chatTarget && (
               <MessagesScreen
@@ -432,38 +518,11 @@ function App() {
             )}
           </main>
 
-          {/* Right panel placeholder (desktop) */}
-          {showNav && (
-            <aside className="hidden lg:block w-[260px] flex-shrink-0">
-              <div className="sticky top-8 rounded-22 bg-white border border-line p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <img src={currentUser.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
-                  <div>
-                    <p className="text-[14px] font-bold text-ink">{currentUser.name}</p>
-                    <p className="text-[12px] text-ink-muted">@{currentUser.username}</p>
-                  </div>
-                </div>
-                <p className="text-[13px] text-ink-muted mb-3 font-semibold tracking-wide uppercase">Sugerencias</p>
-                {[
-                  { name: 'Valentina Ríos', user: 'vale_rios', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop' },
-                  { name: 'Mateo Sánchez', user: 'mateo.s', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop' },
-                  { name: 'Lucía Parra', user: 'lu_parra', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop' },
-                ].map(s => (
-                  <div key={s.user} className="flex items-center gap-2.5 py-2.5">
-                    <img src={s.avatar} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-ink truncate">{s.name}</p>
-                      <p className="text-[11px] text-ink-muted">@{s.user}</p>
-                    </div>
-                    <button className="text-[12px] font-bold text-coral">Seguir</button>
-                  </div>
-                ))}
-              </div>
-            </aside>
-          )}
+          {/* Right panel — desktop only */}
+          <RightPanel currentUser={currentUser} onNavigate={navigate} />
         </div>
 
-        {/* Bottom nav (mobile only, tab screens only) */}
+        {/* Bottom nav — mobile only, tab screens only */}
         {showNav && (
           <BottomNav active={activeTab} onChange={(tab) => navigate(tab)} onNavigate={navigate} />
         )}

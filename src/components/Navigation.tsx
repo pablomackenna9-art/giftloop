@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Compass, Bell, User, Plus, Gift } from 'lucide-react';
+import { Home, Compass, Bell, User, Plus, Gift, MessageCircle, Users } from 'lucide-react';
 import { Sheet } from './base';
 
 export type NavTab = 'home' | 'explore' | 'activity' | 'profile';
@@ -8,9 +8,10 @@ type Props = {
   active: NavTab;
   onChange: (tab: NavTab) => void;
   onNavigate: (screen: string, data?: unknown) => void;
+  currentScreen?: string;
 };
 
-const NAV_ITEMS = [
+const BOTTOM_NAV_ITEMS = [
   { id: 'home' as NavTab, icon: <Home size={23} strokeWidth={1.9} />, label: 'Inicio' },
   { id: 'explore' as NavTab, icon: <Compass size={23} strokeWidth={1.9} />, label: 'Explorar' },
   { id: 'activity' as NavTab, icon: <Bell size={23} strokeWidth={1.9} />, label: 'Actividad', dot: true },
@@ -46,8 +47,8 @@ function CreateSheet({ open, onClose, onNavigate }: { open: boolean; onClose: ()
 // ─── MOBILE BOTTOM NAV ────────────────────────────────────────────────────────
 export function BottomNav({ active, onChange, onNavigate }: Props) {
   const [showCreate, setShowCreate] = useState(false);
-  const left = NAV_ITEMS.slice(0, 2);
-  const right = NAV_ITEMS.slice(2);
+  const left = BOTTOM_NAV_ITEMS.slice(0, 2);
+  const right = BOTTOM_NAV_ITEMS.slice(2);
 
   return (
     <>
@@ -92,38 +93,64 @@ export function BottomNav({ active, onChange, onNavigate }: Props) {
 }
 
 // ─── DESKTOP SIDEBAR NAV ──────────────────────────────────────────────────────
-export function SidebarNav({ active, onChange, onNavigate }: Props) {
+const SIDEBAR_ITEMS = [
+  { id: 'home', icon: <Home size={20} strokeWidth={1.9} />, label: 'Inicio' },
+  { id: 'explore', icon: <Compass size={20} strokeWidth={1.9} />, label: 'Explorar' },
+  { id: 'activity', icon: <Bell size={20} strokeWidth={1.9} />, label: 'Actividad', badge: 4 },
+  { id: 'messages', icon: <MessageCircle size={20} strokeWidth={1.9} />, label: 'Mensajes', badge: 2 },
+  { id: 'friends', icon: <Users size={20} strokeWidth={1.9} />, label: 'Amigos' },
+  { id: 'profile', icon: <User size={20} strokeWidth={1.9} />, label: 'Mi perfil' },
+];
+
+export function SidebarNav({ active, onChange, onNavigate, currentScreen }: Props) {
   const [showCreate, setShowCreate] = useState(false);
+  const activeId = currentScreen ?? active;
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col gap-1 sticky top-8 w-[220px] flex-shrink-0">
+      <aside className="hidden lg:flex flex-col gap-0.5 sticky top-8 w-[200px] flex-shrink-0 h-fit">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-3 py-2 mb-4">
-          <div className="w-9 h-9 rounded-12 bg-coral flex items-center justify-center" style={{ boxShadow: '0 4px 12px rgba(239,117,100,.4)' }}>
-            <Gift size={18} className="text-ink" />
+        <div className="flex items-center gap-2.5 px-3 py-2 mb-5">
+          <div className="w-8 h-8 rounded-10 bg-coral flex items-center justify-center flex-shrink-0"
+            style={{ boxShadow: '0 4px 12px rgba(239,117,100,.4)' }}>
+            <Gift size={16} className="text-ink" />
           </div>
-          <span className="font-display text-[22px] font-[800] tracking-[-0.02em] text-ink">GiftLoop</span>
+          <span className="font-display text-[20px] font-[800] tracking-[-0.02em] text-ink">giftloop</span>
         </div>
 
-        {/* Nav items */}
-        {NAV_ITEMS.map(item => (
-          <button key={item.id} onClick={() => onChange(item.id)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-16 text-left transition-all ${active === item.id ? 'bg-sand text-ink font-bold' : 'text-ink-muted hover:bg-sand hover:text-ink'}`}>
-            <div className="relative w-6 flex-shrink-0">
-              {item.icon}
-              {item.dot && <div className="absolute -top-0.5 -right-0.5 w-[9px] h-[9px] rounded-full bg-coral border-2 border-cream" />}
-            </div>
-            <span className="text-[15px] font-semibold">{item.label}</span>
-          </button>
-        ))}
+        {SIDEBAR_ITEMS.map(item => {
+          const isActive = activeId === item.id;
+          return (
+            <button key={item.id}
+              onClick={() => {
+                if (item.id === 'home' || item.id === 'explore' || item.id === 'activity' || item.id === 'profile') {
+                  onChange(item.id as NavTab);
+                } else {
+                  onNavigate(item.id);
+                }
+              }}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-12 text-left transition-all w-full ${
+                isActive ? 'bg-ink text-cream font-bold' : 'text-ink hover:bg-sand font-medium'
+              }`}>
+              <div className="relative w-5 flex-shrink-0">
+                {item.icon}
+              </div>
+              <span className="text-[14px] flex-1">{item.label}</span>
+              {item.badge && (
+                <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-20 ${isActive ? 'bg-coral text-ink' : 'bg-coral text-ink'}`}>
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
 
         {/* Crear button */}
         <button onClick={() => setShowCreate(true)}
-          className="flex items-center gap-3 px-3 py-3 rounded-18 mt-2 font-bold text-[15px] text-ink transition-all"
-          style={{ background: '#EF7564', boxShadow: '0 6px 16px rgba(239,117,100,.35)' }}>
-          <Plus size={22} strokeWidth={2.4} />
-          Crear
+          className="flex items-center gap-3 px-3 py-2.5 rounded-12 mt-3 font-bold text-[14px] text-ink transition-all w-full"
+          style={{ background: '#EF7564', boxShadow: '0 4px 14px rgba(239,117,100,.35)' }}>
+          <Plus size={20} strokeWidth={2.4} />
+          + Crear deseo
         </button>
       </aside>
 
