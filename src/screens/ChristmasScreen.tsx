@@ -1,7 +1,18 @@
 import { useState } from 'react';
-import { ChevronLeft, Plus, TreePine, Gift, Star } from 'lucide-react';
+import { ChevronLeft, Plus, TreePine, Star, Settings, Store } from 'lucide-react';
 import { loadChildren, loadWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, XMAS_LIGHT } from './xmas-data';
 import type { ChildProfile } from './xmas-data';
+import { loadStores } from './xmas-store-data';
+
+export type XmasRole = 'adult' | 'admin' | 'store-juguetemax' | 'store-lego' | 'store-explora';
+const ROLE_LABELS: Record<XmasRole, string> = {
+  adult: '👤 Adulto',
+  admin: '⚙️ Admin GiftLoop',
+  'store-juguetemax': '🧸 JugueteMax',
+  'store-lego': '🧱 LEGO Store',
+  'store-explora': '🔬 Exploradores',
+};
+const ROLE_ORDER: XmasRole[] = ['adult', 'admin', 'store-juguetemax', 'store-lego', 'store-explora'];
 
 type Props = {
   onBack: () => void;
@@ -19,6 +30,14 @@ function snowflake(x: number, delay: number) {
 
 export function ChristmasScreen({ onBack, onNavigate }: Props) {
   const [children, setChildren] = useState<ChildProfile[]>(loadChildren);
+  const [role, setRole] = useState<XmasRole>('adult');
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const stores = loadStores();
+
+  const cycleRole = () => {
+    const idx = ROLE_ORDER.indexOf(role);
+    setRole(ROLE_ORDER[(idx + 1) % ROLE_ORDER.length]);
+  };
 
   const getStatus = (child: ChildProfile) => {
     if (!child.setupDone) return { label: 'Configurando', color: '#8A7D90' };
@@ -32,11 +51,38 @@ export function ChristmasScreen({ onBack, onNavigate }: Props) {
       <div className="relative overflow-hidden px-5 pt-5 pb-10"
         style={{ background: `linear-gradient(135deg, ${XMAS_GREEN} 0%, #1E4034 100%)` }}>
         {[10, 25, 42, 58, 74, 88].map((x, i) => snowflake(x, i * 0.4))}
-        <button onClick={onBack}
-          className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
-          style={{ background: 'rgba(255,255,255,.15)' }}>
-          <ChevronLeft size={20} className="text-white" />
-        </button>
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={onBack}
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,.15)' }}>
+            <ChevronLeft size={20} className="text-white" />
+          </button>
+          {/* Role selector */}
+          <div className="relative">
+            <button onClick={() => setShowRoleMenu(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-20 text-[12px] font-bold"
+              style={{ background: 'rgba(255,255,255,.2)', color: 'white', border: '1.5px solid rgba(255,255,255,.3)' }}>
+              {ROLE_LABELS[role]} ▾
+            </button>
+            {showRoleMenu && (
+              <div className="absolute right-0 top-11 rounded-14 overflow-hidden z-50 min-w-[180px]"
+                style={{ background: 'white', boxShadow: '0 8px 24px rgba(48,34,56,.15)', border: '1.5px solid #E2D8CB' }}>
+                <p className="text-[10px] font-bold text-ink-muted px-3 pt-2 pb-1">DEMO · Cambiar rol</p>
+                {ROLE_ORDER.map(r => (
+                  <button key={r} onClick={() => {
+                    setRole(r); setShowRoleMenu(false);
+                    if (r === 'admin') onNavigate('xmas-admin');
+                    else if (r.startsWith('store-')) onNavigate('xmas-store', r.replace('store-', 'store-'));
+                  }}
+                    className="w-full text-left px-3 py-2.5 text-[13px] font-semibold hover:bg-sand transition-colors"
+                    style={{ color: r === role ? XMAS_GREEN : '#302238', background: r === role ? `${XMAS_GREEN}10` : 'transparent' }}>
+                    {ROLE_LABELS[r]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         <div className="flex items-start gap-3">
           <div className="w-12 h-12 rounded-20 flex items-center justify-center flex-shrink-0"
             style={{ background: XMAS_RED, boxShadow: `0 6px 18px rgba(192,57,43,.5)` }}>
@@ -125,6 +171,28 @@ export function ChristmasScreen({ onBack, onNavigate }: Props) {
             </div>
           );
         })}
+
+        {/* Admin + Store shortcuts */}
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => onNavigate('xmas-admin')}
+            className="rounded-18 p-3 flex items-center gap-2 text-left"
+            style={{ background: 'white', border: '1.5px solid #E2D8CB' }}>
+            <Settings size={18} style={{ color: XMAS_GREEN }} className="flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[12px] font-bold text-ink">Panel Admin</p>
+              <p className="text-[10px] text-ink-muted">Catálogo y solicitudes</p>
+            </div>
+          </button>
+          <button onClick={() => onNavigate('xmas-store', 'store-juguetemax')}
+            className="rounded-18 p-3 flex items-center gap-2 text-left"
+            style={{ background: 'white', border: '1.5px solid #E2D8CB' }}>
+            <Store size={18} style={{ color: XMAS_GREEN }} className="flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[12px] font-bold text-ink">Panel Tienda</p>
+              <p className="text-[10px] text-ink-muted">Responder solicitudes</p>
+            </div>
+          </button>
+        </div>
 
         {/* Add child card */}
         <button

@@ -127,7 +127,16 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
           </button>
         </div>
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pb-16">
-          <div className="text-[80px] mb-4 select-none" style={{ filter: 'drop-shadow(0 8px 20px rgba(0,0,0,.3))' }}>🎅</div>
+          <div className="relative mb-4">
+            <img
+              src="/santa-real.jpg"
+              alt={child.santaName}
+              className="w-[120px] h-[120px] rounded-full object-cover object-top"
+              style={{ border: '4px solid rgba(255,255,255,.4)', boxShadow: '0 8px 32px rgba(0,0,0,.4)' }}
+            />
+            <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full flex items-center justify-center text-[18px]"
+              style={{ background: '#C9A227', boxShadow: '0 4px 10px rgba(0,0,0,.3)' }}>🎅</div>
+          </div>
           <h1 className="font-display text-[28px] font-[800] text-white text-center leading-tight mb-2">
             {child.name}, tengo un<br />mensaje para ti
           </h1>
@@ -138,7 +147,7 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
           {/* Simulated video player */}
           <div className="w-full rounded-22 overflow-hidden mb-6" style={{ background: '#0D2218', border: '2px solid rgba(255,255,255,.15)' }}>
             <div className="aspect-video flex flex-col items-center justify-center gap-3 px-6">
-              <div className="text-[48px]">🎬</div>
+              <img src="/santa-real.jpg" alt="" className="w-16 h-16 rounded-full object-cover object-top opacity-80" style={{ border: '2px solid rgba(255,255,255,.3)' }} />
               <p className="text-[12px] text-white text-center font-medium" style={{ opacity: .7 }}>
                 DEMOSTRACIÓN · Saludo personalizado
               </p>

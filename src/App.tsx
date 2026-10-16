@@ -21,6 +21,9 @@ import { ChristmasScreen } from './screens/ChristmasScreen';
 import { ChristmasSetupScreen } from './screens/ChristmasSetupScreen';
 import { ChristmasChildScreen } from './screens/ChristmasChildScreen';
 import { ChristmasAdultScreen } from './screens/ChristmasAdultScreen';
+import { AdminScreen } from './screens/AdminScreen';
+import { StorePanelScreen } from './screens/StorePanelScreen';
+import { AdultPurchaseScreen } from './screens/AdultPurchaseScreen';
 import type { ChildProfile } from './screens/xmas-data';
 import type { Friend, Wish, FollowStatus, ChatMessage } from './components/data';
 
@@ -313,7 +316,7 @@ function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavig
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
-type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends' | 'chat' | 'calendar' | 'christmas' | 'xmas-setup' | 'xmas-child' | 'xmas-adult';
+type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends' | 'chat' | 'calendar' | 'christmas' | 'xmas-setup' | 'xmas-child' | 'xmas-adult' | 'xmas-admin' | 'xmas-store' | 'xmas-purchase';
 const NAV_TABS: NavTab[] = ['home', 'explore', 'activity', 'profile'];
 
 function App() {
@@ -556,7 +559,16 @@ function App() {
               <ChristmasChildScreen child={screenData as ChildProfile} onBack={() => navigate('christmas')} />
             )}
             {screen === 'xmas-adult' && (screenData as ChildProfile)?.id && (
-              <ChristmasAdultScreen child={screenData as ChildProfile} onBack={() => navigate('christmas')} />
+              <ChristmasAdultScreen child={screenData as ChildProfile} onBack={() => navigate('christmas')} onNavigate={navigate} />
+            )}
+            {screen === 'xmas-admin' && (
+              <AdminScreen onBack={() => navigate('christmas')} />
+            )}
+            {screen === 'xmas-store' && (
+              <StorePanelScreen storeId={screenData as string ?? 'store-juguetemax'} onBack={() => navigate('christmas')} />
+            )}
+            {screen === 'xmas-purchase' && (screenData as ChildProfile)?.id && (
+              <AdultPurchaseScreen child={screenData as ChildProfile} onBack={() => navigate('xmas-adult', screenData)} />
             )}
           </main>
 

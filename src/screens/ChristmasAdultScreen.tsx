@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ChevronLeft, Lock, Share2, Check } from 'lucide-react';
+import { ChevronLeft, Lock, Share2, Check, ShoppingBag } from 'lucide-react';
 import { loadWishes, saveWishes, XMAS_CATALOG, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP } from './xmas-data';
 import type { ChildProfile, XmasWish } from './xmas-data';
 
 type Props = {
   child: ChildProfile;
   onBack: () => void;
+  onNavigate?: (screen: string, data?: unknown) => void;
 };
 
 const DEMO_PIN = '1234';
@@ -79,7 +80,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
   );
 }
 
-export function ChristmasAdultScreen({ child, onBack }: Props) {
+export function ChristmasAdultScreen({ child, onBack, onNavigate }: Props) {
   const [unlocked, setUnlocked] = useState(false);
   const [wishes, setWishes] = useState<XmasWish[]>(() => loadWishes(child.id));
   const [showShare, setShowShare] = useState(false);
@@ -131,6 +132,14 @@ export function ChristmasAdultScreen({ child, onBack }: Props) {
       </div>
 
       <div className="px-5 flex flex-col gap-4 pt-4">
+        {/* Purchase CTA */}
+        <button
+          onClick={() => onNavigate?.('xmas-purchase', child)}
+          className="w-full h-13 py-3 rounded-18 text-[15px] font-bold text-white flex items-center justify-center gap-2"
+          style={{ background: XMAS_RED, boxShadow: `0 8px 24px rgba(192,57,43,.35)` }}>
+          <ShoppingBag size={18} /> Gestionar compras para {child.name}
+        </button>
+
         {/* Budget summary card */}
         <div className="rounded-22 p-4 bg-white" style={{ boxShadow: '0 4px 20px rgba(45,106,79,.1)', border: '1.5px solid #E2D8CB' }}>
           <p className="text-[12px] font-bold text-ink-muted uppercase tracking-wider mb-3">Resumen de presupuesto</p>
