@@ -9,12 +9,14 @@ type Props = {
   onChange: (tab: NavTab) => void;
   onNavigate: (screen: string, data?: unknown) => void;
   currentScreen?: string;
+  activityBadge?: number;
+  messagesBadge?: number;
 };
 
 const BOTTOM_NAV_ITEMS = [
   { id: 'home' as NavTab, icon: <Home size={23} strokeWidth={1.9} />, label: 'Inicio' },
   { id: 'explore' as NavTab, icon: <Compass size={23} strokeWidth={1.9} />, label: 'Explorar' },
-  { id: 'activity' as NavTab, icon: <Bell size={23} strokeWidth={1.9} />, label: 'Actividad', dot: true },
+  { id: 'activity' as NavTab, icon: <Bell size={23} strokeWidth={1.9} />, label: 'Actividad' },
   { id: 'profile' as NavTab, icon: <User size={23} strokeWidth={1.9} />, label: 'Mi perfil' },
 ];
 
@@ -45,7 +47,7 @@ function CreateSheet({ open, onClose, onNavigate }: { open: boolean; onClose: ()
 }
 
 // ─── MOBILE BOTTOM NAV ────────────────────────────────────────────────────────
-export function BottomNav({ active, onChange, onNavigate }: Props) {
+export function BottomNav({ active, onChange, onNavigate, activityBadge }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const left = BOTTOM_NAV_ITEMS.slice(0, 2);
   const right = BOTTOM_NAV_ITEMS.slice(2);
@@ -81,7 +83,9 @@ export function BottomNav({ active, onChange, onNavigate }: Props) {
             style={{ color: active === item.id ? '#302238' : '#8A7D90' }}>
             <div className="relative">
               {item.icon}
-              {item.dot && <div className="absolute -top-0.5 -right-0.5 w-[9px] h-[9px] rounded-full bg-coral border-2 border-cream" />}
+              {item.id === 'activity' && (activityBadge ?? 0) > 0 && (
+                <div className="absolute -top-0.5 -right-0.5 w-[9px] h-[9px] rounded-full bg-coral border-2 border-cream" />
+              )}
             </div>
             <span className="text-[11px] font-bold">{item.label}</span>
           </button>
@@ -96,13 +100,13 @@ export function BottomNav({ active, onChange, onNavigate }: Props) {
 const SIDEBAR_ITEMS = [
   { id: 'home', icon: <Home size={20} strokeWidth={1.9} />, label: 'Inicio' },
   { id: 'explore', icon: <Compass size={20} strokeWidth={1.9} />, label: 'Explorar' },
-  { id: 'activity', icon: <Bell size={20} strokeWidth={1.9} />, label: 'Actividad', badge: 4 },
-  { id: 'messages', icon: <MessageCircle size={20} strokeWidth={1.9} />, label: 'Mensajes', badge: 2 },
+  { id: 'activity', icon: <Bell size={20} strokeWidth={1.9} />, label: 'Actividad' },
+  { id: 'messages', icon: <MessageCircle size={20} strokeWidth={1.9} />, label: 'Mensajes' },
   { id: 'friends', icon: <Users size={20} strokeWidth={1.9} />, label: 'Amigos' },
   { id: 'profile', icon: <User size={20} strokeWidth={1.9} />, label: 'Mi perfil' },
 ];
 
-export function SidebarNav({ active, onChange, onNavigate, currentScreen }: Props) {
+export function SidebarNav({ active, onChange, onNavigate, currentScreen, activityBadge, messagesBadge }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const activeId = currentScreen ?? active;
 
@@ -136,9 +140,14 @@ export function SidebarNav({ active, onChange, onNavigate, currentScreen }: Prop
                 {item.icon}
               </div>
               <span className="text-[14px] flex-1">{item.label}</span>
-              {item.badge && (
-                <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-20 ${isActive ? 'bg-coral text-ink' : 'bg-coral text-ink'}`}>
-                  {item.badge}
+              {item.id === 'activity' && (activityBadge ?? 0) > 0 && (
+                <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-20 bg-coral text-ink">
+                  {activityBadge}
+                </span>
+              )}
+              {item.id === 'messages' && (messagesBadge ?? 0) > 0 && (
+                <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-20 bg-coral text-ink">
+                  {messagesBadge}
                 </span>
               )}
             </button>

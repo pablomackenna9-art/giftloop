@@ -314,6 +314,10 @@ function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [screenData, setScreenData] = useState<Friend | Wish | unknown>(null);
 
+  // Notification badges — cleared when user visits the screen
+  const [activityBadge, setActivityBadge] = useState(4);
+  const [messagesBadge, setMessagesBadge] = useState(2);
+
   // Friend follow state: userId → 'none' | 'pending' | 'friends'
   const [followStatus, setFollowStatus] = useState<Record<string, FollowStatus>>({
     'camila': 'friends',
@@ -378,6 +382,9 @@ function App() {
     } else {
       setScreen(s as Screen);
     }
+    // Clear badges when visiting their screens
+    if (s === 'activity') setActivityBadge(0);
+    if (s === 'messages' || s === 'chat') setMessagesBadge(0);
     window.scrollTo(0, 0);
   };
 
@@ -470,6 +477,8 @@ function App() {
               onChange={(tab) => navigate(tab)}
               onNavigate={navigate}
               currentScreen={screen}
+              activityBadge={activityBadge}
+              messagesBadge={messagesBadge}
             />
           </div>
 
@@ -525,7 +534,7 @@ function App() {
 
         {/* Bottom nav — mobile only, tab screens only */}
         {showNav && (
-          <BottomNav active={activeTab} onChange={(tab) => navigate(tab)} onNavigate={navigate} />
+          <BottomNav active={activeTab} onChange={(tab) => navigate(tab)} onNavigate={navigate} activityBadge={activityBadge} messagesBadge={messagesBadge} />
         )}
       </div>
     </ErrorBoundary>
