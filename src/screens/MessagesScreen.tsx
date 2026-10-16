@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, Send, Trash2 } from 'lucide-react';
 import { MESSAGES } from '../components/data';
-import type { ChatMessage } from '../App';
+import type { ChatMessage } from '../components/data';
 
 type Props = {
   onBack: () => void;

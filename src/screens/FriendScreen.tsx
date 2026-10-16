@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { Button, Chip, StatusBadge, PrivacyNote, fmt } from '../components/base';
-import type { Friend, Wish } from '../components/data';
+import type { Friend, Wish, FollowStatus } from '../components/data';
 import { CAMILA, CAMILA_WISHES } from '../components/data';
-import type { FollowStatus } from '../App';
 
 type Props = {
   friend?: Friend;

@@ -1,5 +1,15 @@
 // Design spec data constants for the redesign
 
+// Shared types (here to avoid circular imports between App and screens)
+export type FollowStatus = 'none' | 'pending' | 'friends';
+
+export type ChatMessage = {
+  id: string;
+  text: string;
+  mine: boolean;
+  time: string;
+};
+
 export type Friend = {
   id: string; name: string; username: string; avatar: string;
   cover?: string; bio?: string; daysUntil: number; birthday: string;

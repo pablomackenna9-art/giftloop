@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, Search, UserCheck, UserX } from 'lucide-react';
 import { Toast, SectionLabel } from '../components/base';
 import { FRIEND_REQUESTS, SUGGESTED_FRIENDS, FRIENDS_LIST } from '../components/data';
-import type { FollowStatus } from '../App';
+import type { FollowStatus } from '../components/data';
 
 // All users pool: merge friends list + suggestions, deduplicated
 const ALL_USERS = [

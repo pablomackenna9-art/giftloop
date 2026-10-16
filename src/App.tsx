@@ -15,7 +15,7 @@ import { ActivityScreen } from './screens/ActivityScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { MessagesScreen } from './screens/MessagesScreen';
 import { FriendsScreen } from './screens/FriendsScreen';
-import type { Friend, Wish } from './components/data';
+import type { Friend, Wish, FollowStatus, ChatMessage } from './components/data';
 
 // ─── AUTH HELPERS ─────────────────────────────────────────────────────────────
 function simpleHash(s: string): string {
@@ -62,16 +62,6 @@ function setCachedUser(u: AppUser | null) {
   if (u) localStorage.setItem(CACHE_KEY, JSON.stringify(u));
   else localStorage.removeItem(CACHE_KEY);
 }
-
-// ─── TYPES ────────────────────────────────────────────────────────────────────
-export type FollowStatus = 'none' | 'pending' | 'friends';
-
-export type ChatMessage = {
-  id: string;
-  text: string;
-  mine: boolean;
-  time: string;
-};
 
 // ─── ERROR BOUNDARY ──────────────────────────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
