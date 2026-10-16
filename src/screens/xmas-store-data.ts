@@ -439,7 +439,7 @@ export const DEMO_CAMPAIGNS: Campaign[] = [
     startDate: '2026-12-01',
     endDate: '2026-12-24',
     priority: 1,
-    status: 'scheduled',
+    status: 'active',
     commercialAmount: 350000,
     stats: { impressions: 0, clicks: 0, selected: 0, requestsSent: 0, paymentConfirmed: 0 },
   },
