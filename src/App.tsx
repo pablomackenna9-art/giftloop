@@ -3,7 +3,7 @@ import type { ReactNode, ErrorInfo } from 'react';
 import { Eye, EyeOff, Gift } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { BottomNav } from './components/Navigation';
+import { BottomNav, SidebarNav } from './components/Navigation';
 import type { NavTab } from './components/Navigation';
 import { HomeScreen } from './screens/HomeScreen';
 import { FriendScreen } from './screens/FriendScreen';
@@ -63,6 +63,16 @@ function setCachedUser(u: AppUser | null) {
   else localStorage.removeItem(CACHE_KEY);
 }
 
+// ─── TYPES ────────────────────────────────────────────────────────────────────
+export type FollowStatus = 'none' | 'pending' | 'friends';
+
+export type ChatMessage = {
+  id: string;
+  text: string;
+  mine: boolean;
+  time: string;
+};
+
 // ─── ERROR BOUNDARY ──────────────────────────────────────────────────────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
@@ -107,7 +117,6 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
         if (mode === 'login') {
           const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
           if (err) {
-            // Supabase failed (invalid key?) — fall back to localStorage
             const users = getStoredUsers();
             const found = users.find(u => u.email === email && u.passwordHash === simpleHash(password));
             if (!found) { setError('Email o contraseña incorrectos.'); return; }
@@ -121,7 +130,6 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
           const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}&backgroundColor=EF7564&textColor=302238`;
           const { data, error: err } = await supabase.auth.signUp({ email, password });
           if (err) {
-            // Supabase failed — fall back to localStorage
             const users = getStoredUsers();
             if (users.find(u => u.email === email)) { setError('Ya existe una cuenta con ese email.'); return; }
             const newUser: AppUser = { id: String(Date.now()), name: name.trim(), username: username.toLowerCase(), email, passwordHash: simpleHash(password), avatar: avatarUrl, bio: '' };
@@ -134,7 +142,6 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
         }
         return;
       }
-      // LocalStorage fallback
       if (mode === 'login') {
         const found = getStoredUsers().find(u => u.email === email && u.passwordHash === simpleHash(password));
         if (!found) { setError('Email o contraseña incorrectos.'); return; }
@@ -162,7 +169,6 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
   return (
     <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-10">
           <div className="w-20 h-20 bg-coral rounded-[28px] flex items-center justify-center mx-auto mb-4"
             style={{ boxShadow: '0 10px 24px -10px rgba(239,117,100,.8)' }}>
@@ -172,7 +178,6 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
           <p className="text-[15px] text-ink-muted mt-1">Tu wishlist social</p>
         </div>
 
-        {/* Tabs */}
         <div className="grid grid-cols-2 p-1 rounded-16 mb-6" style={{ background: '#EFE8DE' }}>
           {(['login', 'register'] as const).map(m => (
             <button key={m} onClick={() => { setMode(m); setError(''); }}
@@ -225,13 +230,30 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
-type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends';
+type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends' | 'chat';
 const NAV_TABS: NavTab[] = ['home', 'explore', 'activity', 'profile'];
 
 function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [screenData, setScreenData] = useState<Friend | Wish | unknown>(null);
+
+  // Friend follow state: userId → 'none' | 'pending' | 'friends'
+  const [followStatus, setFollowStatus] = useState<Record<string, FollowStatus>>({
+    'camila': 'friends',
+  });
+
+  // Conversations: userId → ChatMessage[] (keys match MESSAGES[].id)
+  const [conversations, setConversations] = useState<Record<string, ChatMessage[]>>({
+    'camila': [
+      { id: '1', text: '¡Hola! Vi que te gustó mi lista 🎁', mine: false, time: '10:32' },
+      { id: '2', text: 'Sí! Quería preguntarte por los aretes 😍', mine: true, time: '10:35' },
+      { id: '3', text: 'Son de Awka, te paso el link', mine: false, time: '10:36' },
+    ],
+    'tomas': [
+      { id: '1', text: '¿Qué vas a regalar a Camila?', mine: false, time: 'Mar' },
+    ],
+  });
 
   const [appUser, setAppUser] = useState<AppUser | null>(() => {
     const cached = getCachedUser();
@@ -248,7 +270,6 @@ function App() {
     if (!isSupabaseConfigured || !supabase) return;
     const applySession = async (supaUser: SupabaseUser | null) => {
       if (!supaUser) {
-        // Fall back to local stored user (dev mode with invalid Supabase key)
         const localUser = getStoredCurrent();
         if (localUser) { setCachedUser(localUser); setAppUser(localUser); setAuthLoading(false); return; }
         setCachedUser(null); setAppUser(null); setAuthLoading(false); return;
@@ -292,7 +313,7 @@ function App() {
 
   const handleAuth = (user: AppUser) => {
     setAppUser(user); setCachedUser(user);
-    setStoredCurrent(user); // always save locally as fallback
+    setStoredCurrent(user);
   };
 
   const handleLogout = async () => {
@@ -300,6 +321,40 @@ function App() {
     if (isSupabaseConfigured && supabase) await supabase.auth.signOut();
     else setStoredCurrent(null);
     setAppUser(null); setScreen('home');
+  };
+
+  const handleFollow = (userId: string) => {
+    setFollowStatus(prev => {
+      const cur = prev[userId] ?? 'none';
+      if (cur === 'none') return { ...prev, [userId]: 'pending' };
+      if (cur === 'pending') return { ...prev, [userId]: 'none' }; // cancel request
+      return { ...prev, [userId]: 'none' }; // unfollow
+    });
+  };
+
+  const handleAcceptFollow = (userId: string) => {
+    setFollowStatus(prev => ({ ...prev, [userId]: 'friends' }));
+  };
+
+  const handleRejectFollow = (userId: string) => {
+    setFollowStatus(prev => ({ ...prev, [userId]: 'none' }));
+  };
+
+  const sendMessage = (toUserId: string, text: string) => {
+    const now = new Date();
+    const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const msg: ChatMessage = { id: String(Date.now()), text, mine: true, time };
+    setConversations(prev => ({
+      ...prev,
+      [toUserId]: [...(prev[toUserId] ?? []), msg],
+    }));
+  };
+
+  const deleteMessage = (toUserId: string, msgId: string) => {
+    setConversations(prev => ({
+      ...prev,
+      [toUserId]: (prev[toUserId] ?? []).filter(m => m.id !== msgId),
+    }));
   };
 
   if (authLoading) return (
@@ -320,53 +375,108 @@ function App() {
   const currentUser = appUser;
   const showNav = NAV_TABS.includes(screen as NavTab);
 
+  // Chat data for 'chat' screen
+  const chatTarget = screenData as { userId: string; name: string; avatar: string } | null;
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-cream">
-        <div className="mx-auto" style={{ maxWidth: 448 }}>
+        {/* ─── Desktop layout ──────────────────────────────────────────── */}
+        <div className="lg:flex lg:max-w-[1080px] lg:mx-auto lg:px-8 lg:gap-10 lg:py-8">
 
-          {/* Tab screens with bottom nav */}
-          {screen === 'home' && (
-            <HomeScreen currentUser={currentUser} onNavigate={navigate} />
-          )}
-          {screen === 'explore' && (
-            <ExploreScreen onNavigate={navigate} />
-          )}
-          {screen === 'activity' && (
-            <ActivityScreen onNavigate={navigate} />
-          )}
-          {screen === 'profile' && (
-            <ProfileScreen currentUser={currentUser} onNavigate={navigate} onLogout={handleLogout} />
-          )}
-
-          {/* Secondary screens (no bottom nav) */}
-          {screen === 'friend' && (
-            <FriendScreen friend={screenData as Friend | undefined} onBack={goBack} onNavigate={navigate} />
-          )}
-          {screen === 'wish' && (
-            <WishScreen wish={screenData as Wish | undefined} onBack={goBack} onNavigate={navigate} />
-          )}
-          {screen === 'group' && (
-            <GroupScreen onBack={goBack} onNavigate={navigate} />
-          )}
-          {screen === 'add' && (
-            <AddScreen onBack={goBack} onNavigate={navigate} />
-          )}
-          {screen === 'add-exp' && (
-            <AddScreen onBack={goBack} onNavigate={navigate} isExperience />
-          )}
-          {screen === 'messages' && (
-            <MessagesScreen onBack={goBack} onNavigate={navigate} />
-          )}
-          {screen === 'friends' && (
-            <FriendsScreen onBack={goBack} />
-          )}
-
-          {/* Bottom nav (only on tab screens) */}
+          {/* Sidebar (desktop only, only on main tab screens) */}
           {showNav && (
-            <BottomNav active={activeTab} onChange={(tab) => navigate(tab)} onNavigate={navigate} />
+            <SidebarNav active={activeTab} onChange={(tab) => navigate(tab)} onNavigate={navigate} />
+          )}
+
+          {/* Main content */}
+          <main className="flex-1 min-w-0 lg:max-w-[520px]">
+            {/* ─── Tab screens ─────────────────────────────────────── */}
+            {screen === 'home' && <HomeScreen currentUser={currentUser} onNavigate={navigate} />}
+            {screen === 'explore' && <ExploreScreen onNavigate={navigate} />}
+            {screen === 'activity' && <ActivityScreen onNavigate={navigate} />}
+            {screen === 'profile' && <ProfileScreen currentUser={currentUser} onNavigate={navigate} onLogout={handleLogout} />}
+
+            {/* ─── Secondary screens ───────────────────────────────── */}
+            {screen === 'friend' && (
+              <FriendScreen
+                friend={screenData as Friend | undefined}
+                onBack={goBack}
+                onNavigate={navigate}
+                followStatus={followStatus[(screenData as Friend)?.id ?? 'camila'] ?? 'friends'}
+                onFollow={() => handleFollow((screenData as Friend)?.id ?? 'camila')}
+              />
+            )}
+            {screen === 'wish' && <WishScreen wish={screenData as Wish | undefined} onBack={goBack} onNavigate={navigate} />}
+            {screen === 'group' && <GroupScreen onBack={goBack} onNavigate={navigate} />}
+            {screen === 'add' && <AddScreen onBack={goBack} onNavigate={navigate} />}
+            {screen === 'add-exp' && <AddScreen onBack={goBack} onNavigate={navigate} isExperience />}
+            {screen === 'messages' && (
+              <MessagesScreen
+                onBack={goBack}
+                onNavigate={navigate}
+                conversations={conversations}
+              />
+            )}
+            {screen === 'chat' && chatTarget && (
+              <MessagesScreen
+                onBack={goBack}
+                onNavigate={navigate}
+                conversations={conversations}
+                openChatId={chatTarget.userId}
+                openChatName={chatTarget.name}
+                openChatAvatar={chatTarget.avatar}
+                onSend={(text) => sendMessage(chatTarget.userId, text)}
+                onDelete={(msgId) => deleteMessage(chatTarget.userId, msgId)}
+              />
+            )}
+            {screen === 'friends' && (
+              <FriendsScreen
+                onBack={goBack}
+                followStatus={followStatus}
+                onFollow={handleFollow}
+                onAccept={handleAcceptFollow}
+                onReject={handleRejectFollow}
+                onNavigate={navigate}
+              />
+            )}
+          </main>
+
+          {/* Right panel placeholder (desktop) */}
+          {showNav && (
+            <aside className="hidden lg:block w-[260px] flex-shrink-0">
+              <div className="sticky top-8 rounded-22 bg-white border border-line p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <img src={currentUser.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                  <div>
+                    <p className="text-[14px] font-bold text-ink">{currentUser.name}</p>
+                    <p className="text-[12px] text-ink-muted">@{currentUser.username}</p>
+                  </div>
+                </div>
+                <p className="text-[13px] text-ink-muted mb-3 font-semibold tracking-wide uppercase">Sugerencias</p>
+                {[
+                  { name: 'Valentina Ríos', user: 'vale_rios', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop' },
+                  { name: 'Mateo Sánchez', user: 'mateo.s', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop' },
+                  { name: 'Lucía Parra', user: 'lu_parra', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop' },
+                ].map(s => (
+                  <div key={s.user} className="flex items-center gap-2.5 py-2.5">
+                    <img src={s.avatar} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-ink truncate">{s.name}</p>
+                      <p className="text-[11px] text-ink-muted">@{s.user}</p>
+                    </div>
+                    <button className="text-[12px] font-bold text-coral">Seguir</button>
+                  </div>
+                ))}
+              </div>
+            </aside>
           )}
         </div>
+
+        {/* Bottom nav (mobile only, tab screens only) */}
+        {showNav && (
+          <BottomNav active={activeTab} onChange={(tab) => navigate(tab)} onNavigate={navigate} />
+        )}
       </div>
     </ErrorBoundary>
   );

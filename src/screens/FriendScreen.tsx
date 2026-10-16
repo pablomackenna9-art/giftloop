@@ -3,51 +3,76 @@ import { ChevronLeft } from 'lucide-react';
 import { Button, Chip, StatusBadge, PrivacyNote, fmt } from '../components/base';
 import type { Friend, Wish } from '../components/data';
 import { CAMILA, CAMILA_WISHES } from '../components/data';
+import type { FollowStatus } from '../App';
 
 type Props = {
   friend?: Friend;
   onBack: () => void;
   onNavigate: (screen: string, data?: unknown) => void;
   viewMode?: 'normal' | 'from_link' | 'recipient';
+  followStatus?: FollowStatus;
+  onFollow?: () => void;
 };
 
-export function FriendScreen({ friend = CAMILA, onBack, onNavigate, viewMode = 'normal' }: Props) {
+export function FriendScreen({
+  friend = CAMILA,
+  onBack,
+  onNavigate,
+  viewMode = 'normal',
+  followStatus = 'friends',
+  onFollow,
+}: Props) {
   const [activeList, setActiveList] = useState('cumple29');
-  const [following, setFollowing] = useState(false);
+
+  const followLabel = followStatus === 'friends' ? 'Siguiendo' : followStatus === 'pending' ? 'Pendiente' : 'Seguir';
+  const followClass = followStatus === 'none'
+    ? 'bg-ink text-cream border-ink'
+    : followStatus === 'pending'
+      ? 'bg-sand text-ink-muted border-[#D9CFC2]'
+      : 'bg-transparent border-ink text-ink';
 
   return (
     <div className="min-h-screen bg-cream pb-20">
       {/* Cover */}
-      <div className="relative" style={{ height: 190 }}>
+      <div className="relative" style={{ height: 200 }}>
         <img src={friend.cover} alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,.15) 0%, transparent 60%)' }} />
         <button onClick={onBack}
-          className="absolute top-3 left-3.5 w-11 h-11 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(250,247,242,.94)' }}>
+          className="absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center"
+          style={{ background: 'rgba(250,247,242,.92)' }}>
           <ChevronLeft size={20} className="text-ink" />
         </button>
-        <span className="absolute top-3.5 right-4 bg-coral text-ink text-[13px] font-bold px-3 py-[7px] rounded-20">
+        <span className="absolute top-4 right-4 bg-coral text-ink text-[13px] font-bold px-3 py-1.5 rounded-20">
           Cumple en 6 días
         </span>
       </div>
 
       {/* Content */}
-      <div className="px-5 flex flex-col" style={{ marginTop: -50, gap: 14 }}>
-        {/* Avatar */}
-        <img src={friend.avatar} alt="" className="w-[100px] h-[100px] rounded-full object-cover border-[5px] border-cream" />
+      <div className="px-5 flex flex-col" style={{ marginTop: -44, gap: 14 }}>
+        {/* Avatar row */}
+        <div className="flex items-end justify-between">
+          <img src={friend.avatar} alt="" className="w-[96px] h-[96px] rounded-full object-cover border-[5px] border-cream" />
+        </div>
 
         {/* Name & bio */}
         <div>
-          <h1 className="font-display text-[30px] font-[800] tracking-[-0.02em] text-ink leading-none">{friend.name}</h1>
-          <p className="text-[14px] text-ink-muted mt-1">@{friend.username} · {friend.location} · {friend.friendCount} amigos</p>
-          <p className="text-[15px] text-ink mt-2 leading-snug">{friend.bio}</p>
+          <h1 className="font-display text-[28px] font-[800] tracking-[-0.02em] text-ink leading-none">{friend.name}</h1>
+          <p className="text-[13px] text-ink-muted mt-1">@{friend.username} · {friend.location} · {friend.friendCount} amigos</p>
+          <p className="text-[14px] text-ink mt-2 leading-snug">{friend.bio}</p>
         </div>
 
-        {/* Buttons */}
+        {/* Action buttons */}
         <div className="flex gap-2.5">
-          <Button onClick={() => onNavigate('messages')} size="md" className="flex-1 rounded-14">Mensaje</Button>
-          <button onClick={() => setFollowing(f => !f)}
-            className={`flex-1 h-[46px] rounded-14 text-[14px] font-semibold border transition-all ${following ? 'bg-transparent border-ink text-ink' : 'bg-ink text-cream border-ink'}`}>
-            {following ? 'Siguiendo' : 'Seguir'}
+          <Button
+            onClick={() => onNavigate('chat', { userId: friend.id ?? 'camila', name: friend.name, avatar: friend.avatar })}
+            size="md"
+            className="flex-1 rounded-14">
+            Mensaje
+          </Button>
+          <button
+            onClick={onFollow}
+            className={`flex-1 h-[46px] rounded-14 text-[14px] font-semibold border transition-all ${followClass}`}>
+            {followLabel}
           </button>
         </div>
 
@@ -58,19 +83,19 @@ export function FriendScreen({ friend = CAMILA, onBack, onNavigate, viewMode = '
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
             </svg>
-            <p className="text-[14px] text-ink">Abriste la lista <strong>Cumple 29</strong> desde un enlace que compartió Camila. Elige un deseo para reservarlo.</p>
+            <p className="text-[14px] text-ink">Abriste la lista <strong>Cumple 29</strong> desde un enlace que compartió {friend.name}. Elige un deseo para reservarlo.</p>
           </div>
         )}
 
         {/* Privacy note */}
         {viewMode !== 'recipient' && (
-          <PrivacyNote text={<>Reservas y regalos grupales son <strong>secretos</strong>: Camila no los ve.</>} />
+          <PrivacyNote text={<>Reservas y regalos grupales son <strong>secretos</strong>: {friend.name} no los ve.</>} />
         )}
 
         {/* Recipient view notice */}
         {viewMode === 'recipient' && (
           <div className="rounded-16 px-4 py-3 bg-ink text-cream text-[13px] leading-snug">
-            Así ve Camila su lista: sin reservas, compras ni grupos. La sorpresa queda intacta.
+            Así ve {friend.name} su lista: sin reservas, compras ni grupos. La sorpresa queda intacta.
           </div>
         )}
 
@@ -104,14 +129,14 @@ export function FriendScreen({ friend = CAMILA, onBack, onNavigate, viewMode = '
         </div>
 
         {/* Wish grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {CAMILA_WISHES.map((wish, i) => (
+        <div className="grid grid-cols-2 gap-3 pb-4">
+          {(activeList === 'cumple29' ? CAMILA_WISHES : CAMILA_WISHES.slice(0, 3)).map((wish: Wish, i: number) => (
             <button
               key={wish.id}
               onClick={() => onNavigate('wish', wish)}
               className={`text-left rounded-20 overflow-hidden bg-white ${i === 0 ? 'col-span-2' : ''}`}
               style={{ opacity: wish.status === 'reserved_other' ? 0.6 : 1 }}>
-              <div className="relative" style={{ height: i === 0 ? 240 : 170 }}>
+              <div className="relative" style={{ height: i === 0 ? 220 : 160 }}>
                 <img src={wish.image} alt="" className="w-full h-full object-cover"
                   style={{ filter: wish.status === 'reserved_other' ? 'grayscale(.7)' : 'none' }} />
                 {wish.kind === 'experience' && (

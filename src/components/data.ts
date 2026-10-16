@@ -91,9 +91,9 @@ export const ACTIVITY_PAYMENTS = [
 ];
 
 export const MESSAGES = [
-  { id: 'm1', name: 'Regalo Camila · privado', last: 'Tomás: ¡Ya aportaron 3! Falta poco 🎉', time: '10:42', unread: 2, isGroup: true, image: PH('1505740420928-5e560c06d30e', 52, 52) },
-  { id: 'm2', name: 'Camila Rojas', last: 'Gracias por el mensaje 😊', time: 'Ayer', unread: 0, avatar: PH('1494790108377-be9c29b29330', 52, 52) },
-  { id: 'm3', name: 'Tomás', last: '¿Qué vas a regalar?', time: 'Mar', unread: 1, avatar: PH('1507003211169-0a1dd7228f2d', 52, 52) },
+  { id: 'group_camila', name: 'Regalo Camila · privado', last: 'Tomás: ¡Ya aportaron 3! Falta poco 🎉', time: '10:42', unread: 2, isGroup: true, image: PH('1505740420928-5e560c06d30e', 52, 52) },
+  { id: 'camila', name: 'Camila Rojas', last: 'Gracias por el mensaje 😊', time: 'Ayer', unread: 0, avatar: PH('1494790108377-be9c29b29330', 52, 52) },
+  { id: 'tomas', name: 'Tomás', last: '¿Qué vas a regalar?', time: 'Mar', unread: 1, avatar: PH('1507003211169-0a1dd7228f2d', 52, 52) },
 ];
 
 export const FRIEND_REQUESTS = [
