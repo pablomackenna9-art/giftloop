@@ -10,7 +10,8 @@ type Props = {
   onNavigate: (screen: string, data?: unknown) => void;
 };
 
-export function WishScreen({ wish = CAMILA_WISHES[0], onBack, onNavigate }: Props) {
+export function WishScreen({ wish: _wish, onBack, onNavigate }: Props) {
+  const wish = _wish ?? CAMILA_WISHES[0];
   const [status, setStatus] = useState(wish.status);
   const [imgIdx, setImgIdx] = useState(0);
   const [showReserve, setShowReserve] = useState(false);

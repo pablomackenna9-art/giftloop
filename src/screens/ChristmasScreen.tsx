@@ -48,8 +48,8 @@ export function ChristmasScreen({ onBack, onNavigate }: Props) {
   return (
     <div className="min-h-screen pb-28" style={{ background: '#FAF7F2' }}>
       {/* Hero header */}
-      <div className="relative overflow-hidden px-5 pt-5 pb-10"
-        style={{ background: `linear-gradient(135deg, ${XMAS_GREEN} 0%, #1E4034 100%)` }}>
+      <div className="relative px-5 pt-5 pb-10"
+        style={{ background: `linear-gradient(135deg, ${XMAS_GREEN} 0%, #1E4034 100%)`, overflow: 'visible' }}>
         {[10, 25, 42, 58, 74, 88].map((x, i) => snowflake(x, i * 0.4))}
         <div className="flex items-center justify-between mb-4">
           <button onClick={onBack}
