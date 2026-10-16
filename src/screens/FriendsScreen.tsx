@@ -4,13 +4,18 @@ import { Toast, SectionLabel } from '../components/base';
 import { FRIEND_REQUESTS, SUGGESTED_FRIENDS, FRIENDS_LIST } from '../components/data';
 import type { FollowStatus } from '../components/data';
 
-// All users pool: merge friends list + suggestions, deduplicated
-const ALL_USERS = [
-  ...FRIENDS_LIST,
-  ...SUGGESTED_FRIENDS.filter(s => !FRIENDS_LIST.some(f => f.id === s.id)),
+// All users pool: friends + suggestions + requests + extras, deduplicated
+const EXTRA_USERS = [
   { id: 'user_ana', name: 'Ana Martínez', username: 'ana.mtz', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop', mutual: 2, daysUntil: 90, birthday: '' },
   { id: 'user_pedro', name: 'Pedro Gómez', username: 'pedro_g', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop', mutual: 0, daysUntil: 90, birthday: '' },
   { id: 'user_lucia', name: 'Lucía Torres', username: 'lu_torres', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop', mutual: 1, daysUntil: 90, birthday: '' },
+];
+const REQUEST_USERS = FRIEND_REQUESTS.map(r => ({ ...r, daysUntil: 90, birthday: '' }));
+const ALL_USERS = [
+  ...FRIENDS_LIST,
+  ...SUGGESTED_FRIENDS.filter(s => !FRIENDS_LIST.some(f => f.id === s.id)),
+  ...REQUEST_USERS.filter(r => !FRIENDS_LIST.some(f => f.id === r.id)),
+  ...EXTRA_USERS,
 ];
 
 type Props = {
@@ -34,7 +39,14 @@ export function FriendsScreen({ onBack, followStatus, onFollow, onAccept, onReje
       )
     : [];
 
-  const friends = FRIENDS_LIST.filter(f => followStatus[f.id] === 'friends');
+  // Include both FRIENDS_LIST members AND accepted request users
+  const acceptedRequestUsers = ALL_USERS.filter(u =>
+    !FRIENDS_LIST.some(f => f.id === u.id) && followStatus[u.id] === 'friends'
+  );
+  const friends = [
+    ...FRIENDS_LIST.filter(f => followStatus[f.id] === 'friends'),
+    ...acceptedRequestUsers,
+  ];
   const suggestions = SUGGESTED_FRIENDS.filter(s => !followStatus[s.id] || followStatus[s.id] === 'none' || followStatus[s.id] === 'pending');
 
   function getFollowLabel(userId: string) {
