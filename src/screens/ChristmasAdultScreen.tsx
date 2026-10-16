@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ChevronLeft, Lock, Share2, Check, ShoppingBag } from 'lucide-react';
-import { loadWishes, saveWishes, XMAS_CATALOG, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP } from './xmas-data';
+import { loadWishes, saveWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP } from './xmas-data';
 import type { ChildProfile, XmasWish } from './xmas-data';
+import { loadCampaigns, loadProducts, loadStores } from './xmas-store-data';
 
 type Props = {
   child: ChildProfile;
@@ -185,6 +186,52 @@ export function ChristmasAdultScreen({ child, onBack, onNavigate }: Props) {
             </div>
           </div>
         )}
+
+        {/* Sponsored campaigns */}
+        {(() => {
+          const campaigns = loadCampaigns().filter(c =>
+            c.status === 'active' && c.locations.includes('adult_panel_featured')
+          );
+          const allProducts = loadProducts();
+          const stores = loadStores();
+          const sponsoredProducts = campaigns.flatMap(c =>
+            c.products
+              .map(pid => allProducts.find(p => p.id === pid))
+              .filter((p): p is NonNullable<typeof p> =>
+                !!p && p.status === 'published' && (p.stock as number) > 0 &&
+                Number(p.price) <= child.adultBudget && (p.minAge ?? 0) <= child.age
+              )
+          );
+          if (sponsoredProducts.length === 0) return null;
+          return (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-[12px] font-bold uppercase tracking-wider" style={{ color: XMAS_GOLD }}>⭐ Selección patrocinada</p>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-6"
+                  style={{ background: `${XMAS_GOLD}22`, color: XMAS_GOLD }}>Patrocinado</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                {sponsoredProducts.map(p => {
+                  const store = stores.find(s => s.id === p.storeId);
+                  return (
+                    <div key={p.id} className="flex-shrink-0 rounded-18 overflow-hidden bg-white"
+                      style={{ width: 140, border: `1.5px solid ${XMAS_GOLD}44` }}>
+                      {p.images?.[0] && <img src={p.images[0]} alt="" className="w-full h-[100px] object-cover" />}
+                      <div className="p-2.5">
+                        <p className="text-[11px] font-semibold text-ink line-clamp-2 mb-1">{p.name}</p>
+                        <p className="text-[12px] font-bold" style={{ color: XMAS_GREEN }}>{fmtCLP(p.price)}</p>
+                        {store && <p className="text-[10px] text-ink-muted mt-0.5">{store.logoEmoji} {store.name}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-ink-muted mt-1.5 px-0.5">
+                Productos de tiendas que participan en GiftLoop. Siempre etiquetados como Patrocinado.
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Gift list */}
         <div>
