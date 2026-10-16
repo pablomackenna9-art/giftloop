@@ -53,7 +53,16 @@ export function HomeScreen({ currentUser, onNavigate }: Props) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7D90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
-            <span className="text-[13px] text-ink-muted flex-1">Busca amigos, listas o ideas</span>
+            <input
+              type="text"
+              placeholder="Busca amigos, listas o ideas"
+              className="text-[13px] text-ink bg-transparent outline-none flex-1 min-w-0 placeholder:text-ink-muted"
+              onKeyDown={e => {
+                if (e.key === 'Enter' && (e.target as HTMLInputElement).value.length >= 2) {
+                  onNavigate('friends');
+                }
+              }}
+            />
           </div>
         </div>
       </div>
