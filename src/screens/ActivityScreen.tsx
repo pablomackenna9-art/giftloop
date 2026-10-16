@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { SectionLabel, Toast } from '../components/base';
 import { ACTIVITY_PAYMENTS } from '../components/data';
+import type { CalendarEvent } from './CalendarScreen';
 
 type Props = {
   onNavigate: (screen: string, data?: unknown) => void;
+  onAddCalendarEvent?: (ev: CalendarEvent) => void;
 };
 
-export function ActivityScreen({ onNavigate }: Props) {
+export function ActivityScreen({ onNavigate, onAddCalendarEvent }: Props) {
   const [eventAccepted, setEventAccepted] = useState<boolean | null>(null);
   const [toast, setToast] = useState('');
   const [reserved, setReserved] = useState(false);
@@ -41,7 +43,17 @@ export function ActivityScreen({ onNavigate }: Props) {
               <strong>Joaquín</strong> te invitó a la once de cumpleaños de <strong>Javiera</strong>, sáb 7 nov.
             </p>
             <div className="flex gap-2">
-              <button onClick={() => { setEventAccepted(true); setToast('¡Vas a la once de Javiera! 🎉'); }}
+              <button onClick={() => {
+                  setEventAccepted(true);
+                  setToast('¡Vas a la once de Javiera! Se agregó al calendario 🎉');
+                  onAddCalendarEvent?.({
+                    id: 'once_javiera',
+                    title: 'Once de Javiera',
+                    subtitle: 'Invitado por Joaquín',
+                    date: '11-07',
+                    type: 'event',
+                  });
+                }}
                 className="flex-1 h-11 rounded-16 bg-ink text-cream text-[14px] font-bold">
                 Voy
               </button>

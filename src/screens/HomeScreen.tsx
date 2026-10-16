@@ -112,7 +112,7 @@ export function HomeScreen({ currentUser, onNavigate }: Props) {
       <div style={{ paddingLeft: 0, paddingRight: 0 }}>
         <div className="flex items-center justify-between px-5 mb-3">
           <h2 className="font-display text-[20px] font-[700]">Próximas celebraciones</h2>
-          <button className="text-[14px] font-semibold text-coral-text">Calendario</button>
+          <button onClick={() => onNavigate('calendar')} className="text-[14px] font-semibold text-coral-text">Calendario</button>
         </div>
         <div className="flex gap-3.5 overflow-x-auto px-5 pb-1" style={{ scrollbarWidth: 'none' }}>
           {FRIENDS_LIST.map(f => {

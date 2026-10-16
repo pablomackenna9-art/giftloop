@@ -15,6 +15,8 @@ import { ActivityScreen } from './screens/ActivityScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { MessagesScreen } from './screens/MessagesScreen';
 import { FriendsScreen } from './screens/FriendsScreen';
+import { CalendarScreen } from './screens/CalendarScreen';
+import type { CalendarEvent } from './screens/CalendarScreen';
 import type { Friend, Wish, FollowStatus, ChatMessage } from './components/data';
 
 // ─── AUTH HELPERS ─────────────────────────────────────────────────────────────
@@ -306,7 +308,7 @@ function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavig
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
-type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends' | 'chat';
+type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends' | 'chat' | 'calendar';
 const NAV_TABS: NavTab[] = ['home', 'explore', 'activity', 'profile'];
 
 function App() {
@@ -317,6 +319,12 @@ function App() {
   // Notification badges — cleared when user visits the screen
   const [activityBadge, setActivityBadge] = useState(4);
   const [messagesBadge, setMessagesBadge] = useState(2);
+
+  // Calendar events added from activity invitations
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const addCalendarEvent = (ev: CalendarEvent) => {
+    setCalendarEvents(prev => prev.find(e => e.id === ev.id) ? prev : [...prev, ev]);
+  };
 
   // Friend follow state: userId → 'none' | 'pending' | 'friends'
   const [followStatus, setFollowStatus] = useState<Record<string, FollowStatus>>({
@@ -486,7 +494,7 @@ function App() {
           <main className="flex-1 min-w-0 lg:max-w-[540px]">
             {screen === 'home' && <HomeScreen currentUser={currentUser} onNavigate={navigate} />}
             {screen === 'explore' && <ExploreScreen onNavigate={navigate} />}
-            {screen === 'activity' && <ActivityScreen onNavigate={navigate} />}
+            {screen === 'activity' && <ActivityScreen onNavigate={navigate} onAddCalendarEvent={addCalendarEvent} />}
             {screen === 'profile' && <ProfileScreen currentUser={currentUser} onNavigate={navigate} onLogout={handleLogout} />}
             {screen === 'friend' && (
               <FriendScreen
@@ -525,6 +533,9 @@ function App() {
                 onReject={handleRejectFollow}
                 onNavigate={navigate}
               />
+            )}
+            {screen === 'calendar' && (
+              <CalendarScreen onBack={goBack} onNavigate={navigate} extraEvents={calendarEvents} />
             )}
           </main>
 
