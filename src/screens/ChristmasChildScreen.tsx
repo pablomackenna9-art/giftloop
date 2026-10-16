@@ -1,0 +1,485 @@
+import { useState } from 'react';
+import { ChevronLeft, Star, X, Send } from 'lucide-react';
+import {
+  XMAS_CATALOG, INTERESTS, loadWishes, saveWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP
+} from './xmas-data';
+import type { ChildProfile, XmasWish } from './xmas-data';
+
+type Phase = 'video' | 'workshop' | 'favorites' | 'letter' | 'sent';
+
+type Props = {
+  child: ChildProfile;
+  onBack: () => void;
+};
+
+function SnowBg() {
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {[5, 15, 25, 35, 45, 55, 65, 75, 85, 95].map((x, i) => (
+        <div key={x} className="absolute text-white select-none opacity-20 animate-bounce"
+          style={{ left: `${x}%`, top: `${(i * 13) % 80}%`, fontSize: 10 + (i % 3) * 4, animationDelay: `${i * 0.5}s`, animationDuration: '4s' }}>
+          ❄
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ChristmasChildScreen({ child, onBack }: Props) {
+  const [phase, setPhase] = useState<Phase>('video');
+  const [wishes, setWishes] = useState<XmasWish[]>(() => loadWishes(child.id));
+  const [freeText, setFreeText] = useState('');
+  const [showFreeInput, setShowFreeInput] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [letterDecor, setLetterDecor] = useState('🎄');
+
+  const script = `¡Ho, ho, ho! ¡Hola, ${child.name}! Qué alegría saludarte desde el Polo Norte. Mis ayudantes me contaron que estás preparando tu carta de Navidad. Tengo algunas ideas para mostrarte, pero también puedes contarme qué te haría ilusión recibir. Elige tus favoritos y prepararemos tu carta juntos. Recuerda que es una lista de deseos: ¡no siempre pueden llegar todos los regalos!`;
+
+  // Filter catalog for child
+  const catalog = XMAS_CATALOG.filter(p => {
+    if (p.price >= child.maxGiftPrice) return false;
+    if (p.minAge > child.age) return false;
+    const excCats: string[] = child.exclusions.map(e => {
+      if (e === 'exc_tech') return 'tecnologia';
+      return '';
+    });
+    if (excCats.includes(p.category)) return false;
+    return true;
+  });
+
+  const filtered = activeCategory === 'all'
+    ? catalog
+    : catalog.filter(p => p.category === activeCategory);
+
+  const categories = ['all', ...Array.from(new Set(catalog.map(p => p.category)))];
+
+  const isInCart = (id: string) => wishes.some(w => w.id === id && !w.isFree);
+  const isFav = (id: string) => wishes.find(w => w.id === id)?.isFavorite ?? false;
+
+  const toggleItem = (item: typeof XMAS_CATALOG[0]) => {
+    setWishes(prev => {
+      let updated: XmasWish[];
+      if (isInCart(item.id)) {
+        updated = prev.filter(w => w.id !== item.id);
+      } else {
+        const wish: XmasWish = {
+          id: item.id, childId: child.id,
+          name: item.name, price: item.price, image: item.image,
+          store: item.store, category: item.category,
+          isFavorite: false, isFree: false, adultStatus: 'none',
+        };
+        updated = [...prev, wish];
+      }
+      saveWishes(child.id, updated);
+      return updated;
+    });
+  };
+
+  const toggleFav = (id: string) => {
+    const favCount = wishes.filter(w => w.isFavorite).length;
+    setWishes(prev => {
+      const updated = prev.map(w => {
+        if (w.id !== id) return w;
+        if (!w.isFavorite && favCount >= 3) return w; // max 3
+        return { ...w, isFavorite: !w.isFavorite };
+      });
+      saveWishes(child.id, updated);
+      return updated;
+    });
+  };
+
+  const addFreeWish = () => {
+    if (!freeText.trim()) return;
+    const wish: XmasWish = {
+      id: `free_${Date.now()}`, childId: child.id,
+      name: freeText.trim(), isFavorite: false, isFree: true, adultStatus: 'none',
+    };
+    const updated = [...wishes, wish];
+    saveWishes(child.id, updated);
+    setWishes(updated);
+    setFreeText('');
+    setShowFreeInput(false);
+  };
+
+  const sendLetter = () => {
+    const all = JSON.parse(localStorage.getItem('xmas_children') ?? '[]');
+    const updated = all.map((c: ChildProfile) =>
+      c.id === child.id ? { ...c, letterSent: true, letterSentAt: new Date().toISOString() } : c
+    );
+    localStorage.setItem('xmas_children', JSON.stringify(updated));
+    setPhase('sent');
+  };
+
+  const cartItems = wishes.filter(w => !w.isFree);
+  const freeWishes = wishes.filter(w => w.isFree);
+  const favorites = wishes.filter(w => w.isFavorite);
+
+  // ── PHASE: VIDEO ───────────────────────────────────────────────────
+  if (phase === 'video') {
+    return (
+      <div className="min-h-screen relative flex flex-col" style={{ background: `linear-gradient(160deg, #1E4034 0%, #2D6A4F 60%, #1A3A2A 100%)` }}>
+        <SnowBg />
+        <div className="relative z-10 px-5 pt-6">
+          <button onClick={onBack}
+            className="w-10 h-10 rounded-full flex items-center justify-center mb-8"
+            style={{ background: 'rgba(255,255,255,.15)' }}>
+            <ChevronLeft size={20} className="text-white" />
+          </button>
+        </div>
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pb-16">
+          <div className="text-[80px] mb-4 select-none" style={{ filter: 'drop-shadow(0 8px 20px rgba(0,0,0,.3))' }}>🎅</div>
+          <h1 className="font-display text-[28px] font-[800] text-white text-center leading-tight mb-2">
+            {child.name}, tengo un<br />mensaje para ti
+          </h1>
+          <p className="text-[14px] text-white text-center mb-8" style={{ opacity: .8 }}>
+            Del {child.santaName} desde el Polo Norte 🎄
+          </p>
+
+          {/* Simulated video player */}
+          <div className="w-full rounded-22 overflow-hidden mb-6" style={{ background: '#0D2218', border: '2px solid rgba(255,255,255,.15)' }}>
+            <div className="aspect-video flex flex-col items-center justify-center gap-3 px-6">
+              <div className="text-[48px]">🎬</div>
+              <p className="text-[12px] text-white text-center font-medium" style={{ opacity: .7 }}>
+                DEMOSTRACIÓN · Saludo personalizado
+              </p>
+              <p className="text-[13px] text-white text-center leading-relaxed" style={{ opacity: .9 }}>
+                "{script}"
+              </p>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,.1)' }}>
+              <div className="flex gap-2">
+                {['⏮', '⏸', '⏭'].map(c => (
+                  <button key={c} className="text-white text-[18px]" style={{ opacity: .7 }}>{c}</button>
+                ))}
+              </div>
+              <div className="flex-1 h-1 rounded-full" style={{ background: 'rgba(255,255,255,.2)' }}>
+                <div className="h-full w-2/3 rounded-full" style={{ background: XMAS_GOLD }} />
+              </div>
+              <span className="text-white text-[12px]" style={{ opacity: .7 }}>CC</span>
+            </div>
+          </div>
+
+          <button onClick={() => setPhase('workshop')}
+            className="w-full h-14 rounded-20 text-[17px] font-bold text-ink"
+            style={{ background: XMAS_GOLD, boxShadow: `0 10px 30px rgba(201,162,39,.5)` }}>
+            🎁 Entrar al taller de regalos
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE: WORKSHOP ────────────────────────────────────────────────
+  if (phase === 'workshop') {
+    return (
+      <div className="min-h-screen pb-32" style={{ background: '#FAF7F2' }}>
+        {/* Header */}
+        <div className="sticky top-0 z-20 px-5 py-3 flex items-center gap-3"
+          style={{ background: 'rgba(250,247,242,.96)', borderBottom: '1px solid #EAE2D6', backdropFilter: 'blur(10px)' }}>
+          <button onClick={onBack}
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ background: 'rgba(48,34,56,.08)' }}>
+            <ChevronLeft size={18} className="text-ink" />
+          </button>
+          <div className="flex-1">
+            <h1 className="font-display text-[18px] font-[800] text-ink">Taller de regalos 🎁</h1>
+            <p className="text-[12px] text-ink-muted">Hola, {child.name}! Elige lo que te haría ilusión</p>
+          </div>
+          <button onClick={() => setPhase('favorites')}
+            className="h-9 px-3 rounded-14 flex items-center gap-1.5 font-bold text-[13px] text-white"
+            style={{ background: XMAS_RED }}>
+            <span>🛷</span> Mi carta ({cartItems.length + freeWishes.length})
+          </button>
+        </div>
+
+        {/* Categories */}
+        <div className="flex gap-2 overflow-x-auto px-5 py-3" style={{ scrollbarWidth: 'none' }}>
+          {categories.map(cat => {
+            const int = INTERESTS.find(i => i.id === cat);
+            const label = cat === 'all' ? '✨ Todos' : `${int?.emoji ?? ''} ${int?.label ?? cat}`;
+            return (
+              <button key={cat} onClick={() => setActiveCategory(cat)}
+                className="flex-shrink-0 h-9 px-4 rounded-20 text-[13px] font-semibold border-[1.5px] transition-all"
+                style={{
+                  background: activeCategory === cat ? XMAS_GREEN : 'white',
+                  color: activeCategory === cat ? 'white' : '#302238',
+                  borderColor: activeCategory === cat ? XMAS_GREEN : '#E2D8CB',
+                }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Product grid */}
+        <div className="grid grid-cols-2 gap-3 px-5">
+          {filtered.map(item => {
+            const inCart = isInCart(item.id);
+            const fav = isFav(item.id);
+            return (
+              <div key={item.id} className="rounded-20 overflow-hidden bg-white"
+                style={{ boxShadow: `0 2px 12px rgba(48,34,56,.06)`, border: inCart ? `2px solid ${XMAS_GREEN}` : '1.5px solid #EAE2D6' }}>
+                <div className="relative" style={{ height: 150 }}>
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  {inCart && (
+                    <div className="absolute inset-0 flex items-center justify-center"
+                      style={{ background: `${XMAS_GREEN}30` }}>
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center"
+                        style={{ background: XMAS_GREEN }}>
+                        <span className="text-white text-[20px]">✓</span>
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => inCart && toggleFav(item.id)}
+                    className="absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(250,247,242,.9)' }}>
+                    <Star size={16} fill={fav ? XMAS_GOLD : 'none'} style={{ color: fav ? XMAS_GOLD : '#8A7D90' }} />
+                  </button>
+                </div>
+                <div className="p-3">
+                  <p className="text-[13px] font-semibold text-ink leading-snug line-clamp-2 mb-2">{item.name}</p>
+                  <button
+                    onClick={() => toggleItem(item)}
+                    className="w-full h-9 rounded-12 text-[13px] font-bold transition-all"
+                    style={{
+                      background: inCart ? 'white' : XMAS_RED,
+                      color: inCart ? XMAS_RED : 'white',
+                      border: inCart ? `1.5px solid ${XMAS_RED}` : 'none',
+                    }}>
+                    {inCart ? '✓ Agregado' : '¡Me gusta!'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Free wish card */}
+        <div className="px-5 mt-4">
+          <div className="rounded-20 p-4 bg-white" style={{ border: '1.5px dashed #E2D8CB' }}>
+            <p className="text-[15px] font-bold text-ink mb-1">¿Hay algo más que te haría ilusión?</p>
+            <p className="text-[13px] text-ink-muted mb-3">Cuéntale al {child.santaName} algo especial</p>
+            {showFreeInput ? (
+              <div className="flex gap-2">
+                <input value={freeText} onChange={e => setFreeText(e.target.value)}
+                  placeholder="Escribe tu deseo aquí..."
+                  className="flex-1 h-11 rounded-12 px-3 text-[14px] text-ink outline-none"
+                  style={{ border: '1.5px solid #E2D8CB', background: '#FAF7F2' }}
+                  onKeyDown={e => e.key === 'Enter' && addFreeWish()} />
+                <button onClick={addFreeWish}
+                  className="h-11 px-4 rounded-12 font-bold text-white"
+                  style={{ background: XMAS_GREEN }}>
+                  <Send size={16} />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowFreeInput(true)}
+                className="h-10 px-5 rounded-12 text-[13px] font-bold text-white"
+                style={{ background: XMAS_GREEN }}>
+                + Pedir otra cosa
+              </button>
+            )}
+            {freeWishes.length > 0 && (
+              <div className="mt-3 flex flex-col gap-1.5">
+                {freeWishes.map(w => (
+                  <div key={w.id} className="flex items-center gap-2 rounded-10 px-3 py-2"
+                    style={{ background: '#FAF7F2' }}>
+                    <span className="text-[13px] flex-1 text-ink">✏️ {w.name}</span>
+                    <button onClick={() => {
+                      const upd = wishes.filter(x => x.id !== w.id);
+                      saveWishes(child.id, upd); setWishes(upd);
+                    }}>
+                      <X size={14} className="text-ink-muted" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom CTA */}
+        {(cartItems.length + freeWishes.length) > 0 && (
+          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[448px] px-5 pb-6 pt-3"
+            style={{ background: 'rgba(250,247,242,.96)', borderTop: '1px solid #EAE2D6' }}>
+            <button onClick={() => setPhase('favorites')}
+              className="w-full h-14 rounded-20 text-[16px] font-bold text-white"
+              style={{ background: XMAS_RED, boxShadow: `0 8px 24px rgba(192,57,43,.4)` }}>
+              🌟 Ver mi carta · {cartItems.length + freeWishes.length} deseos
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── PHASE: FAVORITES ───────────────────────────────────────────────
+  if (phase === 'favorites') {
+    return (
+      <div className="min-h-screen pb-28" style={{ background: '#FAF7F2' }}>
+        <div className="px-5 pt-6 pb-4">
+          <button onClick={() => setPhase('workshop')}
+            className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
+            style={{ background: 'rgba(48,34,56,.08)' }}>
+            <ChevronLeft size={20} className="text-ink" />
+          </button>
+          <h1 className="font-display text-[22px] font-[800] text-ink">¿Cuáles te hacen más ilusión?</h1>
+          <p className="text-[14px] text-ink-muted mt-1">
+            Si tuvieras que elegir solo tres, ¿cuáles serían? Toca la ⭐ para marcarlos.
+          </p>
+          <p className="text-[13px] font-semibold mt-2" style={{ color: favorites.length >= 3 ? XMAS_GOLD : '#8A7D90' }}>
+            {favorites.length}/3 favoritos marcados
+          </p>
+        </div>
+
+        <div className="px-5 flex flex-col gap-3">
+          {cartItems.map(item => {
+            const fav = item.isFavorite;
+            return (
+              <div key={item.id} className="rounded-18 p-3 flex items-center gap-3 bg-white"
+                style={{ border: `1.5px solid ${fav ? XMAS_GOLD : '#EAE2D6'}` }}>
+                {item.image && (
+                  <img src={item.image} alt="" className="w-14 h-14 rounded-14 object-cover flex-shrink-0" />
+                )}
+                <p className="text-[14px] font-semibold text-ink flex-1 leading-snug">{item.name}</p>
+                <button onClick={() => toggleFav(item.id)}
+                  className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: fav ? `${XMAS_GOLD}20` : '#FAF7F2' }}>
+                  <Star size={20} fill={fav ? XMAS_GOLD : 'none'} style={{ color: fav ? XMAS_GOLD : '#8A7D90' }} />
+                </button>
+              </div>
+            );
+          })}
+
+          {freeWishes.map(item => (
+            <div key={item.id} className="rounded-18 p-3 flex items-center gap-3 bg-white"
+              style={{ border: '1.5px solid #EAE2D6' }}>
+              <div className="w-14 h-14 rounded-14 flex items-center justify-center text-[24px] flex-shrink-0"
+                style={{ background: '#FAF7F2' }}>✏️</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-semibold text-ink">{item.name}</p>
+                <p className="text-[12px] text-ink-muted">Deseo libre</p>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => setPhase('workshop')}
+              className="flex-1 h-12 rounded-16 border-[1.5px] border-line text-[14px] font-semibold text-ink bg-white">
+              Seguir eligiendo
+            </button>
+            <button onClick={() => setPhase('letter')}
+              className="flex-1 h-12 rounded-16 text-[14px] font-bold text-white"
+              style={{ background: XMAS_RED }}>
+              Ver mi carta →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE: LETTER ──────────────────────────────────────────────────
+  if (phase === 'letter') {
+    const DECORS = ['🎄', '⭐', '🦌', '🔔', '❄️'];
+    return (
+      <div className="min-h-screen pb-28" style={{ background: '#FAF7F2' }}>
+        <div className="px-5 pt-6 pb-4">
+          <button onClick={() => setPhase('favorites')}
+            className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
+            style={{ background: 'rgba(48,34,56,.08)' }}>
+            <ChevronLeft size={20} className="text-ink" />
+          </button>
+          <h1 className="font-display text-[22px] font-[800] text-ink">Tu carta {letterDecor}</h1>
+        </div>
+
+        {/* Decor selector */}
+        <div className="flex gap-3 px-5 mb-4">
+          {DECORS.map(d => (
+            <button key={d} onClick={() => setLetterDecor(d)}
+              className="w-10 h-10 rounded-full text-[22px] flex items-center justify-center"
+              style={{ background: letterDecor === d ? `${XMAS_GOLD}20` : '#FAF7F2', border: `2px solid ${letterDecor === d ? XMAS_GOLD : 'transparent'}` }}>
+              {d}
+            </button>
+          ))}
+        </div>
+
+        {/* Letter card */}
+        <div className="mx-5 rounded-22 p-5 bg-white"
+          style={{ boxShadow: '0 8px 32px rgba(48,34,56,.1)', border: `2px solid ${XMAS_GOLD}44`, fontFamily: 'Georgia, serif' }}>
+          <p className="text-[20px] font-bold text-center mb-4" style={{ color: XMAS_RED }}>
+            {letterDecor} {letterDecor} {letterDecor}
+          </p>
+          <p className="text-[16px] text-ink mb-3">Querido {child.santaName}:</p>
+          <p className="text-[14px] text-ink-muted mb-4">Me llamo {child.name} y tengo {child.age} años. Estos son los regalos que me harían ilusión:</p>
+
+          {favorites.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[13px] font-bold text-ink mb-2" style={{ color: XMAS_GOLD }}>⭐ Mis favoritos:</p>
+              {favorites.map(w => (
+                <p key={w.id} className="text-[14px] text-ink ml-3">• {w.name}</p>
+              ))}
+            </div>
+          )}
+
+          {cartItems.filter(w => !w.isFavorite).length > 0 && (
+            <div className="mb-4">
+              <p className="text-[13px] font-bold text-ink-muted mb-2">También me gustaría:</p>
+              {cartItems.filter(w => !w.isFavorite).map(w => (
+                <p key={w.id} className="text-[14px] text-ink ml-3">• {w.name}</p>
+              ))}
+            </div>
+          )}
+
+          {freeWishes.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[13px] font-bold text-ink-muted mb-2">También soñé con:</p>
+              {freeWishes.map(w => (
+                <p key={w.id} className="text-[14px] text-ink ml-3">✏️ {w.name}</p>
+              ))}
+            </div>
+          )}
+
+          <p className="text-[14px] text-ink mt-4">Con cariño,</p>
+          <p className="text-[17px] font-bold text-ink">{child.name} {letterDecor}</p>
+        </div>
+
+        <div className="flex gap-3 px-5 mt-4">
+          <button onClick={() => setPhase('workshop')}
+            className="flex-1 h-12 rounded-16 border-[1.5px] border-line text-[14px] font-semibold text-ink bg-white">
+            Seguir eligiendo
+          </button>
+          <button onClick={sendLetter}
+            className="flex-1 h-12 rounded-16 text-[14px] font-bold text-white flex items-center justify-center gap-2"
+            style={{ background: XMAS_RED }}>
+            <Send size={16} /> Enviar carta
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE: SENT ────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
+      style={{ background: `linear-gradient(160deg, ${XMAS_GREEN} 0%, #1E4034 100%)` }}>
+      <SnowBg />
+      <div className="relative z-10 flex flex-col items-center">
+        <div className="text-[80px] mb-4 animate-bounce">✉️</div>
+        <h1 className="font-display text-[26px] font-[800] text-white mb-2">¡Tu carta está lista!</h1>
+        <p className="text-[15px] text-white mb-2" style={{ opacity: .85 }}>
+          Gracias por compartir tus deseos, {child.name}.
+        </p>
+        <p className="text-[13px] text-white mb-8" style={{ opacity: .6 }}>
+          Tu carta va camino al Polo Norte 🛷
+        </p>
+        <button onClick={onBack}
+          className="h-12 px-8 rounded-20 text-[15px] font-bold text-ink"
+          style={{ background: XMAS_GOLD }}>
+          Volver al inicio ⭐
+        </button>
+      </div>
+    </div>
+  );
+}

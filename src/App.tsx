@@ -17,6 +17,11 @@ import { MessagesScreen } from './screens/MessagesScreen';
 import { FriendsScreen } from './screens/FriendsScreen';
 import { CalendarScreen } from './screens/CalendarScreen';
 import type { CalendarEvent } from './screens/CalendarScreen';
+import { ChristmasScreen } from './screens/ChristmasScreen';
+import { ChristmasSetupScreen } from './screens/ChristmasSetupScreen';
+import { ChristmasChildScreen } from './screens/ChristmasChildScreen';
+import { ChristmasAdultScreen } from './screens/ChristmasAdultScreen';
+import type { ChildProfile } from './screens/xmas-data';
 import type { Friend, Wish, FollowStatus, ChatMessage } from './components/data';
 
 // ─── AUTH HELPERS ─────────────────────────────────────────────────────────────
@@ -308,7 +313,7 @@ function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavig
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
-type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends' | 'chat' | 'calendar';
+type Screen = 'home' | 'explore' | 'activity' | 'profile' | 'friend' | 'wish' | 'group' | 'add' | 'add-exp' | 'messages' | 'friends' | 'chat' | 'calendar' | 'christmas' | 'xmas-setup' | 'xmas-child' | 'xmas-adult';
 const NAV_TABS: NavTab[] = ['home', 'explore', 'activity', 'profile'];
 
 function App() {
@@ -536,6 +541,22 @@ function App() {
             )}
             {screen === 'calendar' && (
               <CalendarScreen onBack={goBack} onNavigate={navigate} extraEvents={calendarEvents} />
+            )}
+            {screen === 'christmas' && (
+              <ChristmasScreen onBack={goBack} onNavigate={navigate} />
+            )}
+            {screen === 'xmas-setup' && (
+              <ChristmasSetupScreen
+                existing={(screenData as ChildProfile) ?? null}
+                onBack={goBack}
+                onDone={(child) => navigate('xmas-child', child)}
+              />
+            )}
+            {screen === 'xmas-child' && (screenData as ChildProfile)?.id && (
+              <ChristmasChildScreen child={screenData as ChildProfile} onBack={() => navigate('christmas')} />
+            )}
+            {screen === 'xmas-adult' && (screenData as ChildProfile)?.id && (
+              <ChristmasAdultScreen child={screenData as ChildProfile} onBack={() => navigate('christmas')} />
             )}
           </main>
 

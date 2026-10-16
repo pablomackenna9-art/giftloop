@@ -67,6 +67,26 @@ export function HomeScreen({ currentUser, onNavigate }: Props) {
         </div>
       </div>
 
+      {/* Christmas banner */}
+      <div className="px-4">
+        <button
+          onClick={() => onNavigate('christmas')}
+          className="w-full rounded-[24px] overflow-hidden text-left relative"
+          style={{ background: 'linear-gradient(135deg, #2D6A4F 0%, #1E4034 100%)' }}>
+          <div className="px-5 py-4 flex items-center gap-4">
+            <div className="text-[44px] flex-shrink-0" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,.3))' }}>🎄</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-display text-[17px] font-[800] leading-snug">La magia de Navidad empieza con su carta</p>
+              <p className="text-white text-[13px] mt-0.5" style={{ opacity: .75 }}>Prepara el saludo del Viejo Pascuero</p>
+            </div>
+            <span className="flex-shrink-0 px-3 py-1.5 rounded-20 text-[13px] font-bold text-ink"
+              style={{ background: '#C9A227' }}>Preparar</span>
+          </div>
+          <div className="absolute top-0 right-16 text-white opacity-20 text-[40px] pointer-events-none select-none">❄</div>
+          <div className="absolute bottom-1 right-4 text-white opacity-15 text-[28px] pointer-events-none select-none">⭐</div>
+        </button>
+      </div>
+
       {/* Hero card */}
       <div className="px-4">
         <button
