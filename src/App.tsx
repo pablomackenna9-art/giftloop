@@ -233,17 +233,18 @@ function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavig
           <button className="text-[12px] text-coral font-semibold">Solo tú los ves</button>
         </div>
         {[
-          { name: 'Audífonos · Sofía', sub: 'Reservado · falta comprar', btn: 'Reserva', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=40&h=40&fit=crop' },
-          { name: 'Bicicleta · Sofía', sub: 'Organiza · cierra el martes', btn: 'Aporta$te', img: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?w=40&h=40&fit=crop' },
+          { name: 'Audífonos · Sofía', sub: 'Reservado · falta comprar', btn: 'Ver reserva', screen: 'wish', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=40&h=40&fit=crop' },
+          { name: 'Bicicleta · Sofía', sub: 'Organiza · cierra el martes', btn: 'Ver grupo', screen: 'group', img: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?w=40&h=40&fit=crop' },
         ].map(g => (
-          <div key={g.name} className="flex items-center gap-2.5 py-2.5 border-t border-line">
+          <button key={g.name} onClick={() => onNavigate(g.screen)}
+            className="flex items-center gap-2.5 py-2.5 border-t border-line w-full text-left hover:bg-sand -mx-1 px-1 rounded-10 transition-colors">
             <img src={g.img} alt="" className="w-9 h-9 rounded-10 object-cover flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-[12px] font-semibold text-ink truncate">{g.name}</p>
               <p className="text-[11px] text-ink-muted truncate">{g.sub}</p>
             </div>
-            <button className="text-[11px] font-bold text-coral flex-shrink-0">{g.btn}</button>
-          </div>
+            <span className="text-[11px] font-bold text-coral flex-shrink-0">{g.btn}</span>
+          </button>
         ))}
       </div>
 
