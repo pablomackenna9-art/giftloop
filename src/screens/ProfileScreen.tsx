@@ -130,8 +130,9 @@ export function ProfileScreen({ currentUser, onNavigate, onLogout }: Props) {
       </div>
 
       {/* Logout */}
-      <div className="px-5">
-        <button onClick={onLogout} className="w-full text-[13px] text-ink-muted underline underline-offset-2 py-2">
+      <div className="px-5 pb-4">
+        <button onClick={onLogout}
+          className="w-full h-11 rounded-14 text-[14px] font-semibold text-ink border-[1.5px] border-[#D9CFC2] bg-white hover:bg-sand transition-colors">
           Cerrar sesión
         </button>
       </div>
