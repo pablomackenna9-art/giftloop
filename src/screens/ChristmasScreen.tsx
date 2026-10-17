@@ -100,7 +100,7 @@ export function ChristmasScreen({ onBack, onNavigate }: Props) {
         </div>
       </div>
 
-      <div className="px-5 flex flex-col gap-4" style={{ marginTop: -24 }}>
+      <div className="px-5 flex flex-col gap-4 mt-5">
         {/* Children cards */}
         {children.map(child => {
           const wishes = loadWishes(child.id);

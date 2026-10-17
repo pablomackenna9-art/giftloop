@@ -161,6 +161,26 @@ export function SidebarNav({ active, onChange, onNavigate, currentScreen, activi
           <Plus size={20} strokeWidth={2.4} />
           + Crear deseo
         </button>
+
+        {/* Navidad card — bottom of sidebar */}
+        <button
+          onClick={() => onNavigate('christmas')}
+          className="mt-4 w-full rounded-16 overflow-hidden text-left"
+          style={{ background: 'linear-gradient(135deg, #2D6A4F 0%, #1E4034 100%)' }}>
+          <div className="px-3 py-3 flex items-center gap-2.5">
+            <span className="text-[22px] flex-shrink-0">🎄</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-[10px] font-semibold uppercase tracking-[.06em] leading-none mb-0.5" style={{ opacity: .7 }}>Edición especial</p>
+              <p className="text-white text-[13px] font-bold leading-tight">Navidad en GiftLoop</p>
+            </div>
+          </div>
+          <div className="px-3 py-1.5 flex items-center justify-between"
+            style={{ background: 'rgba(0,0,0,.2)', borderTop: '1px solid rgba(255,255,255,.1)' }}>
+            <p className="text-white text-[10px]" style={{ opacity: .7 }}>Cartas · listas · tiendas</p>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-20"
+              style={{ background: '#C9A227', color: '#302238' }}>→</span>
+          </div>
+        </button>
       </aside>
 
       <CreateSheet open={showCreate} onClose={() => setShowCreate(false)} onNavigate={onNavigate} />

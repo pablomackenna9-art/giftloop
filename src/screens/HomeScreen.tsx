@@ -67,40 +67,6 @@ export function HomeScreen({ currentUser, onNavigate }: Props) {
         </div>
       </div>
 
-      {/* Christmas section */}
-      <div className="px-4">
-        <button
-          onClick={() => onNavigate('christmas')}
-          className="w-full rounded-[24px] overflow-hidden text-left relative"
-          style={{ background: 'linear-gradient(135deg, #2D6A4F 0%, #1A3A28 100%)', minHeight: 110 }}>
-          {/* Snowflakes */}
-          {[15, 35, 62, 82].map((x, i) => (
-            <span key={x} className="absolute text-white select-none pointer-events-none"
-              style={{ left: `${x}%`, top: `${12 + i * 14}%`, fontSize: 13 + i * 3, opacity: 0.12 }}>❄</span>
-          ))}
-          <div className="px-5 py-5 flex items-center gap-4">
-            {/* Pine icon */}
-            <div className="w-14 h-14 rounded-22 flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(255,255,255,.12)', border: '1.5px solid rgba(255,255,255,.2)' }}>
-              <span style={{ fontSize: 30 }}>🎄</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-[11px] font-semibold uppercase tracking-[.08em] mb-0.5"
-                style={{ opacity: .7 }}>Edición especial · Navidad</p>
-              <p className="text-white font-display text-[18px] font-[800] leading-tight">La magia de Navidad<br/>empieza con su carta</p>
-              <p className="text-white text-[12px] mt-1" style={{ opacity: .7 }}>Prepara el saludo del Viejo Pascuero</p>
-            </div>
-          </div>
-          {/* Bottom CTA bar */}
-          <div className="flex items-center justify-between px-5 py-3"
-            style={{ background: 'rgba(0,0,0,.2)', borderTop: '1px solid rgba(255,255,255,.1)' }}>
-            <p className="text-white text-[13px]" style={{ opacity: .8 }}>🎁 Listas · presupuestos · tiendas</p>
-            <span className="px-3.5 py-1.5 rounded-20 text-[13px] font-bold text-ink flex-shrink-0"
-              style={{ background: '#C9A227' }}>Preparar →</span>
-          </div>
-        </button>
-      </div>
-
       {/* Hero card */}
       <div className="px-4">
         <button
@@ -241,6 +207,22 @@ export function HomeScreen({ currentUser, onNavigate }: Props) {
           </div>
           <Button variant="outline" size="sm" fullWidth={false}>Revisar</Button>
         </div>
+      </div>
+
+      {/* Navidad — solo mobile (en desktop va en el sidebar) */}
+      <div className="px-4 lg:hidden">
+        <button
+          onClick={() => onNavigate('christmas')}
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-18 text-left"
+          style={{ background: 'linear-gradient(135deg, #2D6A4F 0%, #1E4034 100%)' }}>
+          <span className="text-[26px] flex-shrink-0">🎄</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-[11px] font-semibold uppercase tracking-[.06em]" style={{ opacity: .7 }}>Edición especial</p>
+            <p className="text-white text-[14px] font-bold leading-tight">Navidad en GiftLoop</p>
+          </div>
+          <span className="text-[13px] font-bold px-3 py-1.5 rounded-20 flex-shrink-0"
+            style={{ background: '#C9A227', color: '#302238' }}>Preparar →</span>
+        </button>
       </div>
 
       <Toast message={toast} onDone={() => setToast('')} />
