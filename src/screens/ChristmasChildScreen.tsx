@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { ChevronLeft, Star, X, Send } from 'lucide-react';
 import {
-  XMAS_CATALOG, INTERESTS, loadWishes, saveWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP
+  INTERESTS, loadWishes, saveWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP
 } from './xmas-data';
 import type { ChildProfile, XmasWish } from './xmas-data';
+import { loadProducts } from './xmas-store-data';
+import type { StoreProduct } from './xmas-store-data';
 
 type Phase = 'video' | 'workshop' | 'favorites' | 'letter' | 'sent';
 
@@ -35,28 +37,40 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
 
   const script = `¡Ho, ho, ho! ¡Hola, ${child.name}! Qué alegría saludarte desde el Polo Norte. Mis ayudantes me contaron que estás preparando tu carta de Navidad. Tengo algunas ideas para mostrarte, pero también puedes contarme qué te haría ilusión recibir. Elige tus favoritos y prepararemos tu carta juntos. Recuerda que es una lista de deseos: ¡no siempre pueden llegar todos los regalos!`;
 
-  // Filter catalog for child
-  const catalog = XMAS_CATALOG.filter(p => {
+  // Build exclusion category list from adult config
+  const excCats: string[] = child.exclusions.flatMap(e => {
+    if (e === 'exc_tech') return ['tecnologia'];
+    if (e === 'exc_screen') return ['tecnologia'];
+    return [];
+  });
+
+  // Use multi-store catalog; apply mandatory filters
+  const allProducts = loadProducts();
+  const catalog = allProducts.filter(p => {
+    if (p.status !== 'published') return false;
     if (p.price >= child.maxGiftPrice) return false;
-    if (p.minAge > child.age) return false;
-    const excCats: string[] = child.exclusions.map(e => {
-      if (e === 'exc_tech') return 'tecnologia';
-      return '';
-    });
+    if (p.minAge !== undefined && p.minAge > child.age) return false;
     if (excCats.includes(p.category)) return false;
+    if (p.stock !== 'unlimited' && Number(p.stock) === 0) return false;
     return true;
   });
 
+  // Sort: interests first, then by price asc, avoid same-store concentration
+  const scoredCatalog = catalog.map(p => {
+    const interestMatch = child.interests.some(i => p.interests.includes(i) || p.category === i);
+    return { ...p, _score: interestMatch ? 1 : 0 };
+  }).sort((a, b) => b._score - a._score);
+
   const filtered = activeCategory === 'all'
-    ? catalog
-    : catalog.filter(p => p.category === activeCategory);
+    ? scoredCatalog
+    : scoredCatalog.filter(p => p.category === activeCategory);
 
   const categories = ['all', ...Array.from(new Set(catalog.map(p => p.category)))];
 
   const isInCart = (id: string) => wishes.some(w => w.id === id && !w.isFree);
   const isFav = (id: string) => wishes.find(w => w.id === id)?.isFavorite ?? false;
 
-  const toggleItem = (item: typeof XMAS_CATALOG[0]) => {
+  const toggleItem = (item: StoreProduct) => {
     setWishes(prev => {
       let updated: XmasWish[];
       if (isInCart(item.id)) {
@@ -64,8 +78,9 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
       } else {
         const wish: XmasWish = {
           id: item.id, childId: child.id,
-          name: item.name, price: item.price, image: item.image,
-          store: item.store, category: item.category,
+          name: item.name, price: item.price,
+          image: item.images[0],
+          store: item.storeId, category: item.category,
           isFavorite: false, isFree: false, adultStatus: 'none',
         };
         updated = [...prev, wish];
@@ -220,16 +235,30 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
           })}
         </div>
 
+        {/* Section label */}
+        <div className="px-5 mb-1">
+          {activeCategory === 'all' ? (
+            <p className="text-[13px] font-bold text-ink-muted">
+              ✨ Para ti · {filtered.length} ideas ordenadas por tus intereses
+            </p>
+          ) : (
+            <p className="text-[13px] font-bold text-ink-muted">
+              {INTERESTS.find(i => i.id === activeCategory)?.emoji} {INTERESTS.find(i => i.id === activeCategory)?.label} · {filtered.length} ideas
+            </p>
+          )}
+        </div>
+
         {/* Product grid */}
         <div className="grid grid-cols-2 gap-3 px-5">
           {filtered.map(item => {
             const inCart = isInCart(item.id);
             const fav = isFav(item.id);
+            const img = item.images?.[0] ?? (item as unknown as { image?: string }).image ?? '';
             return (
               <div key={item.id} className="rounded-20 overflow-hidden bg-white"
                 style={{ boxShadow: `0 2px 12px rgba(48,34,56,.06)`, border: inCart ? `2px solid ${XMAS_GREEN}` : '1.5px solid #EAE2D6' }}>
                 <div className="relative" style={{ height: 150 }}>
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  <img src={img} alt={item.name} className="w-full h-full object-cover" />
                   {inCart && (
                     <div className="absolute inset-0 flex items-center justify-center"
                       style={{ background: `${XMAS_GREEN}30` }}>

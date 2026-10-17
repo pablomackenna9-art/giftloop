@@ -380,6 +380,8 @@ function App() {
       const { data: profile } = await supabase!.from('profiles').select('*').eq('id', supaUser.id).single();
       const user = mapSupabaseUser(supaUser, profile);
       setCachedUser(user); setAppUser(user); setAuthLoading(false);
+      // Sync Christmas data from Supabase to localStorage
+      import('./lib/xmas-db').then(({ syncFromSupabase }) => syncFromSupabase(supaUser.id)).catch(() => {});
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => applySession(session?.user ?? null));

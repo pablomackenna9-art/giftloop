@@ -66,7 +66,29 @@
       "Bash(findstr \"5173\\\\|3001\")",
       "Bash(findstr \":5173 \\\\|:3001 \")",
       "Bash(findstr \":3001\")",
-      "Bash(curl -s http://localhost:5173)"
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(cmdkey /delete:LegacyGeneric:target=git:https://github.com)",
+      "Bash(grep -n \"function \\\\|Screen\\\\|subView\\\\|setSubView\\\\|setScreen\\\\|// ──\\\\|// ─\\\\|{/\\\\*\" src/App.tsx)",
+      "Bash(ls \"C:\\\\Users\\\\macke\\\\OneDrive\\\\Desktop\\\\GIFTLOOP\\\\\" | grep env)",
+      "Bash(git commit -m 'fix: move FollowStatus+ChatMessage types to data.ts to break circular imports *)",
+      "Bash(npx tsc *)",
+      "Bash(git commit -m 'fix: resolve all TypeScript build errors for Vercel *)",
+      "Bash(npm run *)",
+      "Bash(git commit -m 'fix: make desktop search bar interactive \\(was a non-clickable span\\) *)",
+      "Bash(git commit -m 'fix: remove cover banner from friend profile, add stats row \\(amigos/en comun/listas\\) below avatar *)",
+      "Bash(git commit -m 'fix: regalos en curso cards are now clickable — navigate to wish/group screen *)",
+      "Bash(git commit -m 'fix: badges clear when visiting activity/messages screens — dynamic state instead of hardcoded *)",
+      "Bash(git commit -m 'feat: calendar screen with birthdays + accepted events; Javiera once adds to calendar on accept *)",
+      "Bash(git commit -m 'fix: make logout button visible — proper outlined button instead of tiny muted text *)",
+      "Bash(git commit -m 'fix: accepted friend requests now appear in Mis amigos section; request users included in search pool *)",
+      "Bash(git commit -m 'feat: Christmas section — full experience with setup wizard, child workshop, adult panel *)",
+      "Bash(cp \"C:\\\\Users\\\\macke\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-macke-OneDrive-Desktop-GIFTLOOP\\\\41e845f7-e8fb-4f47-bbcc-b78f94f48e39\\\\images\\\\6.jpg\" \"C:\\\\Users\\\\macke\\\\OneDrive\\\\Desktop\\\\GIFTLOOP\\\\public\\\\santa-real.jpg\" && echo \"copied\")",
+      "PowerShell(Copy-Item \"C:\\\\Users\\\\macke\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-macke-OneDrive-Desktop-GIFTLOOP\\\\41e845f7-e8fb-4f47-bbcc-b78f94f48e39\\\\images\\\\6.jpg\" \"C:\\\\Users\\\\macke\\\\OneDrive\\\\Desktop\\\\GIFTLOOP\\\\public\\\\santa-real.jpg\" -Force)",
+      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\macke\\\\OneDrive\\\\Desktop\\\\GIFTLOOP\\\\public\" -Force)",
+      "Bash(vercel env *)"
     ]
   }
 }

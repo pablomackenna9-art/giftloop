@@ -71,18 +71,27 @@ export const XMAS_CATALOG: Array<{
   { id: 'x12', name: 'Set acuarelas premium 36 colores', price: 11990, image: 'https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=300&h=300&fit=crop', category: 'arte', minAge: 6, store: 'Staedtler' },
 ];
 
-// localStorage helpers
+// localStorage helpers (primary reads; Supabase syncs in background)
 export function loadChildren(): ChildProfile[] {
   try { return JSON.parse(localStorage.getItem('xmas_children') ?? '[]'); } catch { return []; }
 }
 export function saveChildren(c: ChildProfile[]) {
   localStorage.setItem('xmas_children', JSON.stringify(c));
+  // Background sync to Supabase
+  const userId = (() => {
+    try { return JSON.parse(localStorage.getItem('gl_user_cache') ?? 'null')?.id ?? ''; } catch { return ''; }
+  })();
+  if (userId) {
+    import('../lib/xmas-db').then(({ dbSaveChildren }) => dbSaveChildren(userId, c)).catch(() => {});
+  }
 }
 export function loadWishes(childId: string): XmasWish[] {
   try { return JSON.parse(localStorage.getItem(`xmas_wishes_${childId}`) ?? '[]'); } catch { return []; }
 }
 export function saveWishes(childId: string, w: XmasWish[]) {
   localStorage.setItem(`xmas_wishes_${childId}`, JSON.stringify(w));
+  // Background sync to Supabase
+  import('../lib/xmas-db').then(({ dbSaveAllWishes }) => dbSaveAllWishes(childId, w)).catch(() => {});
 }
 
 export const XMAS_RED = '#C0392B';
