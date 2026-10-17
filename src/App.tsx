@@ -108,20 +108,25 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmPending, setConfirmPending] = useState(false);
+
+  function supabaseErrorMsg(msg: string): string {
+    if (msg.includes('Invalid login credentials') || msg.includes('invalid_credentials')) return 'Email o contraseña incorrectos.';
+    if (msg.includes('email') && msg.includes('invalid')) return 'Usa un email válido (ej: tucorreo@gmail.com).';
+    if (msg.includes('already registered') || msg.includes('user_already_exists')) return 'Ya existe una cuenta con ese email.';
+    if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) return 'Demasiados intentos. Espera unos minutos.';
+    if (msg.includes('Email not confirmed')) return 'Debes confirmar tu email antes de entrar. Revisa tu bandeja de entrada.';
+    return msg;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(''); setLoading(true);
+    setError(''); setConfirmPending(false); setLoading(true);
     try {
       if (isSupabaseConfigured && supabase) {
         if (mode === 'login') {
           const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
-          if (err) {
-            const users = getStoredUsers();
-            const found = users.find(u => u.email === email && u.passwordHash === simpleHash(password));
-            if (!found) { setError('Email o contraseña incorrectos.'); return; }
-            onAuth(found); return;
-          }
+          if (err) { setError(supabaseErrorMsg(err.message)); return; }
           if (data.user) {
             const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
             onAuth(mapSupabaseUser(data.user, profile));
@@ -129,19 +134,19 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
         } else {
           const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}&backgroundColor=EF7564&textColor=302238`;
           const { data, error: err } = await supabase.auth.signUp({ email, password });
-          if (err) {
-            const users = getStoredUsers();
-            if (users.find(u => u.email === email)) { setError('Ya existe una cuenta con ese email.'); return; }
-            const newUser: AppUser = { id: String(Date.now()), name: name.trim(), username: username.toLowerCase(), email, passwordHash: simpleHash(password), avatar: avatarUrl, bio: '' };
-            saveStoredUsers([...users, newUser]); onAuth(newUser); return;
-          }
-          if (data.user) {
-            await supabase.from('profiles').insert({ id: data.user.id, name: name.trim(), username: username.toLowerCase(), avatar: avatarUrl, bio: '' });
+          if (err) { setError(supabaseErrorMsg(err.message)); return; }
+          if (data.user && data.session) {
+            // Email confirmation disabled — logged in immediately
+            await supabase.from('profiles').upsert({ id: data.user.id, name: name.trim(), username: username.toLowerCase(), avatar: avatarUrl, bio: '' }, { onConflict: 'id' });
             onAuth(mapSupabaseUser(data.user, { name: name.trim(), username: username.toLowerCase(), avatar: avatarUrl, bio: '' }));
+          } else if (data.user && !data.session) {
+            // Email confirmation required
+            setConfirmPending(true);
           }
         }
         return;
       }
+      // Supabase not configured — use localStorage
       if (mode === 'login') {
         const found = getStoredUsers().find(u => u.email === email && u.passwordHash === simpleHash(password));
         if (!found) { setError('Email o contraseña incorrectos.'); return; }
@@ -211,7 +216,14 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
             </div>
           )}
 
-          <button type="submit" disabled={loading}
+          {confirmPending && (
+            <div className="rounded-14 px-4 py-3 text-center" style={{ background: '#E3ECE5' }}>
+              <p className="text-[14px] font-bold text-ink mb-1">📬 Revisa tu email</p>
+              <p className="text-[13px] text-ink-muted">Te enviamos un link de confirmación a <strong>{email}</strong>. Confirma y luego inicia sesión.</p>
+            </div>
+          )}
+
+          <button type="submit" disabled={loading || confirmPending}
             className="w-full h-14 rounded-18 bg-ink text-cream text-[17px] font-bold flex items-center justify-center gap-2 mt-1"
             style={{ opacity: loading ? 0.7 : 1 }}>
             {loading && <div className="w-5 h-5 rounded-full border-2 border-cream border-t-transparent animate-spin" />}
