@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button, Toast, fmt } from '../components/base';
+import { savePersonalWish } from '../lib/wishes';
 import { MY_LISTS } from '../components/data';
 
 type Props = {
   onBack: () => void;
   onNavigate: (screen: string, data?: unknown) => void;
   isExperience?: boolean;
+  userId: string;
+  initialProduct?: { name?: string; price?: number; images?: string[]; image?: string };
 };
 
 type Mode = 'link' | 'manual';
@@ -33,17 +36,19 @@ async function scrapeProduct(rawUrl: string): Promise<{ name: string; image: str
   };
 }
 
-export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {
+export function AddScreen({ onBack, onNavigate, userId, isExperience = false, initialProduct }: Props) {
+  const hasInitial = !!initialProduct?.name;
   const [mode, setMode] = useState<Mode>(isExperience ? 'manual' : 'link');
-  const [step, setStep] = useState<Step>('input');
+  const [step, setStep] = useState<Step>(hasInitial ? 'review' : 'input');
   const [url, setUrl] = useState('');
   const [isExp, setIsExp] = useState(isExperience);
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
+  const [name, setName] = useState(initialProduct?.name ?? '');
+  const [price, setPrice] = useState(initialProduct?.price ? String(initialProduct.price) : '');
   const [note, setNote] = useState('');
   const [selectedList, setSelectedList] = useState('cumple30');
   const [toast, setToast] = useState('');
-  const [scrapedImg, setScrapedImg] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [scrapedImg, setScrapedImg] = useState(initialProduct?.images?.[0] ?? initialProduct?.image ?? '');
   const [scrapedDomain, setScrapedDomain] = useState('');
   const [scrapeError, setScrapeError] = useState('');
 
@@ -51,10 +56,11 @@ export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {
     if (!url) return;
     setStep('loading');
     setScrapeError('');
+    setName(''); setPrice(''); setScrapedImg(''); setScrapedDomain('');
     try {
       const result = await scrapeProduct(url);
       setName(result.name);
-      if (result.price) setPrice(result.price);
+      setPrice(result.price);
       setScrapedImg(result.image);
       setScrapedDomain(result.domain);
       setStep('review');
@@ -66,11 +72,20 @@ export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {
     }
   };
 
-  const handleGuardar = () => {
-    if (name.length < 2) return;
+  const handleGuardar = async () => {
+    if (name.trim().length < 2 || saving) return;
     const list = MY_LISTS.find(l => l.id === selectedList);
-    onNavigate('profile');
-    setToast(`Guardado en ${list?.name ?? 'tu lista'}`);
+    setSaving(true);
+    try {
+      await savePersonalWish(userId, {
+        id: crypto.randomUUID(), name: name.trim(), price: Number(price) || 0,
+        note: note.trim(), image: scrapedImg, url: isExp ? '' : url.trim(),
+        store: isExp ? null : scrapedDomain || null, kind: isExp ? 'experience' : 'product',
+        status: 'free', listId: selectedList, list: list?.name ?? 'Mi lista',
+      });
+      onNavigate('profile');
+    } catch (error) { setToast(error instanceof Error ? error.message : 'No pudimos guardar el deseo.'); }
+    finally { setSaving(false); }
   };
 
   const fmtPrice = (v: string) => {
@@ -158,7 +173,7 @@ export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {
             <FieldsForm name={name} setName={setName} price={price} setPrice={setPrice}
               note={note} setNote={setNote} isExp={false} fmtPrice={fmtPrice} />
             <ListSelector selectedList={selectedList} setSelectedList={setSelectedList} />
-            <Button variant="primary" size="lg" disabled={name.length < 2} onClick={handleGuardar}>
+            <Button variant="primary" size="lg" disabled={name.trim().length < 2 || saving} onClick={handleGuardar}>
               Guardar deseo
             </Button>
           </>
@@ -189,7 +204,7 @@ export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {
             )}
 
             <ListSelector selectedList={selectedList} setSelectedList={setSelectedList} />
-            <Button variant="primary" size="lg" disabled={name.length < 2} onClick={handleGuardar}>
+            <Button variant="primary" size="lg" disabled={name.trim().length < 2 || saving} onClick={handleGuardar}>
               Guardar deseo
             </Button>
           </>

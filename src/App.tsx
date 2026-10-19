@@ -1,3 +1,6 @@
+import { setStorageUser } from './lib/user-storage';
+import { syncRequests } from './screens/xmas-store-data';
+import { syncPersonalWishes } from './lib/wishes';
 import { useState, useEffect, Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { Eye, EyeOff, Gift } from 'lucide-react';
@@ -133,7 +136,7 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
           }
         } else {
           const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}&backgroundColor=EF7564&textColor=302238`;
-          const { data, error: err } = await supabase.auth.signUp({ email, password });
+          const { data, error: err } = await supabase.auth.signUp({ email, password, options: { data: { name: name.trim(), username: username.toLowerCase(), avatar_url: avatarUrl } } });
           if (err) { setError(supabaseErrorMsg(err.message)); return; }
           if (data.user && data.session) {
             // Email confirmation disabled — logged in immediately
@@ -185,7 +188,7 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
 
         <div className="grid grid-cols-2 p-1 rounded-16 mb-6" style={{ background: '#EFE8DE' }}>
           {(['login', 'register'] as const).map(m => (
-            <button key={m} onClick={() => { setMode(m); setError(''); }}
+            <button key={m} onClick={() => { setMode(m); setError(''); setConfirmPending(false); }}
               className={`h-10 rounded-12 text-[14px] font-bold transition ${mode === m ? 'bg-white text-ink' : 'text-ink-muted'}`}
               style={mode === m ? { boxShadow: '0 1px 4px rgba(48,34,56,.12)' } : {}}>
               {m === 'login' ? 'Iniciar sesión' : 'Registrarse'}
@@ -375,44 +378,62 @@ function App() {
   });
 
   const [appUser, setAppUser] = useState<AppUser | null>(() => {
-    const cached = getCachedUser();
-    if (cached) return cached;
-    if (!isSupabaseConfigured) return getStoredCurrent();
-    return null;
+    const user = isSupabaseConfigured ? null : getStoredCurrent();
+    setStorageUser(user?.id ?? '');
+    return user;
   });
-
-  const [authLoading, setAuthLoading] = useState(() =>
-    isSupabaseConfigured && !getCachedUser()
-  );
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+  const [syncError, setSyncError] = useState('');
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
+    let revision = 0;
+    let disposed = false;
+    let sessionIdentity: string | null | undefined;
     const applySession = async (supaUser: SupabaseUser | null) => {
-      if (!supaUser) {
-        const localUser = getStoredCurrent();
-        if (localUser) { setCachedUser(localUser); setAppUser(localUser); setAuthLoading(false); return; }
-        setCachedUser(null); setAppUser(null); setAuthLoading(false); return;
+      const identity = supaUser?.id ?? null;
+      if (sessionIdentity === identity) return;
+      sessionIdentity = identity;
+      const currentRevision = ++revision;
+      setAppUser(null);
+      setAuthLoading(true);
+      setStorageUser(supaUser?.id ?? '');
+      setScreen('home'); setScreenData(null); setActiveTab('home');
+      setConversations({}); setFollowStatus({}); setCalendarEvents([]);
+      setStoredCurrent(null);
+      setSyncError('');
+      if (!supaUser) { setCachedUser(null); setAuthLoading(false); return; }
+      try {
+        const { data: profile } = await supabase!.from('profiles').select('*').eq('id', supaUser.id).single();
+        const user = mapSupabaseUser(supaUser, profile);
+        try {
+          const { syncFromSupabase } = await import('./lib/xmas-db');
+          await Promise.all([syncFromSupabase(supaUser.id), syncPersonalWishes(supaUser.id), syncRequests(supaUser.id)]);
+        } catch {
+          if (currentRevision === revision && !disposed) setSyncError('No pudimos sincronizar todos tus datos. Recarga para volver a intentar.');
+        }
+        if (disposed || currentRevision !== revision) return;
+        setCachedUser(user); setAppUser(user); setAuthLoading(false);
+      } catch {
+        if (!disposed && currentRevision === revision) { setCachedUser(null); setAuthLoading(false); }
       }
-      const cached = getCachedUser();
-      if (cached && cached.id === supaUser.id) {
-        setAppUser(cached); setAuthLoading(false);
-        supabase!.from('profiles').select('*').eq('id', supaUser.id).single()
-          .then(({ data: profile }) => { const fresh = mapSupabaseUser(supaUser, profile); setCachedUser(fresh); setAppUser(fresh); });
-        return;
-      }
-      const { data: profile } = await supabase!.from('profiles').select('*').eq('id', supaUser.id).single();
-      const user = mapSupabaseUser(supaUser, profile);
-      setCachedUser(user); setAppUser(user); setAuthLoading(false);
-      // Sync Christmas data from Supabase to localStorage
-      import('./lib/xmas-db').then(({ syncFromSupabase }) => syncFromSupabase(supaUser.id)).catch(() => {});
     };
-
-    supabase.auth.getSession().then(({ data: { session } }) => applySession(session?.user ?? null));
+    const initialRevision = revision;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!disposed && revision === initialRevision) void applySession(session?.user ?? null);
+    }).catch(() => { if (!disposed && revision === initialRevision) setAuthLoading(false); });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') { setCachedUser(null); setAppUser(null); setAuthLoading(false); return; }
-      if (session?.user) applySession(session.user);
+      if (event === 'SIGNED_OUT') { void applySession(null); return; }
+      // Las consultas se ejecutan fuera del bloqueo interno del cliente de autenticación.
+      setTimeout(() => { if (!disposed) void applySession(session?.user ?? null); }, 0);
     });
-    return () => subscription.unsubscribe();
+    return () => { disposed = true; revision++; subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    const report = () => setSyncError('No pudimos sincronizar tus cambios. Revisa tu conexión e intenta nuevamente.');
+    window.addEventListener('giftloop-sync-error', report);
+    return () => window.removeEventListener('giftloop-sync-error', report);
   }, []);
 
   const navigate = (s: string, data?: unknown) => {
@@ -436,14 +457,17 @@ function App() {
   };
 
   const handleAuth = (user: AppUser) => {
+    if (isSupabaseConfigured) return;
+    setStorageUser(user.id);
     setAppUser(user); setCachedUser(user);
     setStoredCurrent(user);
   };
 
   const handleLogout = async () => {
-    setCachedUser(null);
+    setCachedUser(null); setStoredCurrent(null); setStorageUser('');
+    setConversations({}); setFollowStatus({}); setCalendarEvents([]);
+    setScreenData(null); setActiveTab('home');
     if (isSupabaseConfigured && supabase) await supabase.auth.signOut();
-    else setStoredCurrent(null);
     setAppUser(null); setScreen('home');
   };
 
@@ -507,6 +531,7 @@ function App() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-cream">
+        {syncError && <p role="alert" className="p-3 bg-danger-bg text-danger-text">{syncError}</p>}
 
         {/* ─── Desktop layout (≥1024px): always sidebar + content + right panel ── */}
         <div className="lg:flex lg:max-w-[1100px] lg:mx-auto lg:px-6 lg:gap-8 lg:py-8">
@@ -539,9 +564,9 @@ function App() {
               />
             )}
             {screen === 'wish' && <WishScreen wish={screenData as Wish | undefined} onBack={goBack} onNavigate={navigate} />}
-            {screen === 'group' && <GroupScreen onBack={goBack} onNavigate={navigate} />}
-            {screen === 'add' && <AddScreen onBack={goBack} onNavigate={navigate} />}
-            {screen === 'add-exp' && <AddScreen onBack={goBack} onNavigate={navigate} isExperience />}
+            {screen === 'group' && <GroupScreen key={(screenData as Wish)?.id ?? "default"} wish={screenData as Wish | undefined} onBack={goBack} onNavigate={navigate} />}
+            {screen === 'add' && <AddScreen userId={currentUser.id} onBack={goBack} onNavigate={navigate} initialProduct={screenData as { name?: string; price?: number; images?: string[] } | undefined} />}
+            {screen === 'add-exp' && <AddScreen userId={currentUser.id} onBack={goBack} onNavigate={navigate} isExperience />}
             {screen === 'messages' && (
               <MessagesScreen onBack={goBack} onNavigate={navigate} conversations={conversations} />
             )}
