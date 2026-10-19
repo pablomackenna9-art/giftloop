@@ -12,6 +12,61 @@ type Props = {
 type Mode = 'link' | 'manual';
 type Step = 'input' | 'loading' | 'review';
 
+async function scrapeProduct(rawUrl: string): Promise<{ name: string; image: string; price: string; domain: string }> {
+  const domain = (() => { try { return new URL(rawUrl).hostname.replace('www.', ''); } catch { return ''; } })();
+  const getMeta = (doc: Document, attr: string, val: string) =>
+    doc.querySelector(`meta[${attr}="${val}"]`)?.getAttribute('content') ?? '';
+
+  const proxies = [
+    `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(rawUrl)}`,
+  ];
+
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      const resp = await fetch(proxies[i], { signal: AbortSignal.timeout(10000) });
+      if (!resp.ok) continue;
+      const html = proxies[i].includes('allorigins')
+        ? ((await resp.json()) as { contents?: string }).contents ?? ''
+        : await resp.text();
+
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      const name = (
+        getMeta(doc, 'property', 'og:title') ||
+        getMeta(doc, 'name', 'twitter:title') ||
+        doc.querySelector('title')?.textContent?.trim() || ''
+      ).replace(/\s*[-|].*$/, '').trim().slice(0, 120);
+
+      const image =
+        getMeta(doc, 'property', 'og:image') ||
+        getMeta(doc, 'property', 'og:image:url') ||
+        getMeta(doc, 'name', 'twitter:image') || '';
+
+      let price =
+        getMeta(doc, 'property', 'product:price:amount') ||
+        getMeta(doc, 'property', 'og:price:amount') ||
+        getMeta(doc, 'property', 'product:price') || '';
+
+      if (!price) {
+        doc.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
+          if (price) return;
+          try {
+            const d = JSON.parse(s.textContent ?? '') as Record<string, unknown>;
+            const offers = (d.offers ?? (Array.isArray(d) ? (d[0] as Record<string, unknown>)?.offers : null)) as Record<string, unknown> | null;
+            if (offers?.price) price = String(offers.price);
+            else if (Array.isArray(offers) && (offers[0] as Record<string, unknown>)?.price) price = String((offers[0] as Record<string, unknown>).price);
+          } catch { /* ignore */ }
+        });
+      }
+
+      const priceClean = price.replace(/[^0-9]/g, '');
+      if (name) return { name, image, price: priceClean, domain };
+    } catch { /* try next proxy */ }
+  }
+  throw new Error('No se pudo leer esa tienda');
+}
+
 export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {
   const [mode, setMode] = useState<Mode>(isExperience ? 'manual' : 'link');
   const [step, setStep] = useState<Step>('input');
@@ -22,15 +77,27 @@ export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {
   const [note, setNote] = useState('');
   const [selectedList, setSelectedList] = useState('cumple30');
   const [toast, setToast] = useState('');
+  const [scrapedImg, setScrapedImg] = useState('');
+  const [scrapedDomain, setScrapedDomain] = useState('');
+  const [scrapeError, setScrapeError] = useState('');
 
-  const handleRevisar = () => {
+  const handleRevisar = async () => {
     if (!url) return;
     setStep('loading');
-    setTimeout(() => {
-      setName('Audífonos Bluetooth Sony WH-1000XM5');
-      setPrice('349990');
+    setScrapeError('');
+    try {
+      const result = await scrapeProduct(url);
+      setName(result.name);
+      if (result.price) setPrice(result.price);
+      setScrapedImg(result.image);
+      setScrapedDomain(result.domain);
       setStep('review');
-    }, 1500);
+    } catch {
+      setScrapedImg('');
+      setScrapedDomain('');
+      setScrapeError('No pudimos leer esa tienda automáticamente. Completa los datos manualmente.');
+      setStep('review');
+    }
   };
 
   const handleGuardar = () => {
@@ -103,14 +170,25 @@ export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {
 
         {mode === 'link' && step === 'review' && (
           <>
-            <div className="flex gap-3 p-3 bg-white rounded-16 border border-line">
-              <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=96&h=96&fit=crop&auto=format" alt=""
-                className="w-24 h-24 rounded-14 object-cover flex-shrink-0" />
-              <div>
-                <p className="text-[12px] font-bold text-green-DEFAULT uppercase tracking-wide">Encontrado en Falabella</p>
-                <p className="text-[14px] font-semibold text-ink mt-1">{name}</p>
+            {scrapeError && (
+              <div className="rounded-14 px-4 py-3" style={{ background: '#FFF3D6' }}>
+                <p className="text-[13px] font-semibold" style={{ color: '#5B4A1E' }}>⚠️ {scrapeError}</p>
               </div>
-            </div>
+            )}
+            {!scrapeError && (
+              <div className="flex gap-3 p-3 bg-white rounded-16 border border-line">
+                {scrapedImg
+                  ? <img src={scrapedImg} alt="" className="w-24 h-24 rounded-14 object-cover flex-shrink-0" />
+                  : <div className="w-24 h-24 rounded-14 bg-sand flex items-center justify-center flex-shrink-0 text-[32px]">🛍️</div>
+                }
+                <div>
+                  <p className="text-[12px] font-bold text-green-DEFAULT uppercase tracking-wide">
+                    {scrapedDomain ? `Encontrado en ${scrapedDomain}` : 'Producto encontrado'}
+                  </p>
+                  <p className="text-[14px] font-semibold text-ink mt-1">{name}</p>
+                </div>
+              </div>
+            )}
             <FieldsForm name={name} setName={setName} price={price} setPrice={setPrice}
               note={note} setNote={setNote} isExp={false} fmtPrice={fmtPrice} />
             <ListSelector selectedList={selectedList} setSelectedList={setSelectedList} />

@@ -10,6 +10,7 @@ type Props = {
 
 export function ActivityScreen({ onNavigate, onAddCalendarEvent }: Props) {
   const [eventAccepted, setEventAccepted] = useState<boolean | null>(null);
+  const [groupAccepted, setGroupAccepted] = useState<boolean | null>(null);
   const [toast, setToast] = useState('');
   const [reserved, setReserved] = useState(false);
 
@@ -22,19 +23,58 @@ export function ActivityScreen({ onNavigate, onAddCalendarEvent }: Props) {
         <SectionLabel>INVITACIONES</SectionLabel>
 
         {/* Group invite */}
-        <div className="rounded-22 p-4 bg-coral">
-          <div className="flex items-start gap-3 mb-3">
-            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=44&h=44&fit=crop&auto=format" alt=""
-              className="w-11 h-11 rounded-full object-cover border-2 border-cream flex-shrink-0" />
-            <p className="text-[14px] text-ink">
-              <strong>Tomás</strong> te invitó al regalo grupal para <strong>Camila</strong>: audífonos, 60% reunido.
-            </p>
+        {groupAccepted === null && (
+          <div className="rounded-22 p-4 bg-coral">
+            <div className="flex items-start gap-3 mb-3">
+              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=44&h=44&fit=crop&auto=format" alt=""
+                className="w-11 h-11 rounded-full object-cover border-2 border-cream flex-shrink-0" />
+              <p className="text-[14px] text-ink">
+                <strong>Tomás</strong> te invitó al regalo grupal para <strong>Camila</strong>: audífonos, 60% reunido.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => {
+                  setGroupAccepted(true);
+                  setToast('¡Participas en el regalo de Camila! 🎁');
+                  onNavigate('group');
+                }}
+                className="flex-1 h-12 rounded-18 bg-ink text-cream text-[15px] font-bold">
+                Participar
+              </button>
+              <button onClick={() => {
+                  setGroupAccepted(false);
+                  setToast('Declinaste la invitación.');
+                }}
+                className="h-12 px-4 rounded-18 text-ink text-[14px] font-semibold"
+                style={{ background: 'rgba(255,255,255,.5)' }}>
+                No, gracias
+              </button>
+            </div>
           </div>
-          <button onClick={() => onNavigate('group')}
-            className="w-full h-12 rounded-18 bg-ink text-cream text-[15px] font-bold">
-            Ver grupo
-          </button>
-        </div>
+        )}
+        {groupAccepted === true && (
+          <div className="rounded-22 p-4 bg-white" style={{ boxShadow: '0 2px 14px rgba(48,34,56,.06)', border: '1.5px solid #E2D8CB' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#E3ECE5' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-[14px] font-bold text-ink">Regalo grupal de Camila</p>
+                <p className="text-[13px] text-ink-muted">Participas · audífonos · 60% reunido</p>
+              </div>
+              <button onClick={() => onNavigate('group')}
+                className="h-9 px-3 rounded-12 text-[13px] font-bold text-cream flex-shrink-0"
+                style={{ background: '#302238' }}>
+                Ver grupo
+              </button>
+            </div>
+          </div>
+        )}
+        {groupAccepted === false && (
+          <div className="rounded-22 p-4 bg-white" style={{ border: '1.5px solid #E2D8CB' }}>
+            <p className="text-[13px] text-ink-muted">Declinaste la invitación al regalo grupal de Camila.</p>
+          </div>
+        )}
 
         {/* Event invite */}
         {eventAccepted === null && (

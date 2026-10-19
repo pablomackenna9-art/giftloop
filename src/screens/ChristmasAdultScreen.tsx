@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Lock, Share2, Check, ShoppingBag } from 'lucide-react';
+import { ChevronLeft, Lock, Share2, Check, ShoppingBag, ChevronRight } from 'lucide-react';
 import { loadWishes, saveWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP } from './xmas-data';
 import type { ChildProfile, XmasWish } from './xmas-data';
 import { loadCampaigns, loadProducts, loadStores } from './xmas-store-data';
@@ -86,6 +86,7 @@ export function ChristmasAdultScreen({ child, onBack, onNavigate }: Props) {
   const [wishes, setWishes] = useState<XmasWish[]>(() => loadWishes(child.id));
   const [showShare, setShowShare] = useState(false);
   const [shareMsg, setShareMsg] = useState('');
+  const [activeStore, setActiveStore] = useState<string | null>(null);
 
   if (!unlocked) return <PinGate onUnlock={() => setUnlocked(true)} />;
 
@@ -168,33 +169,59 @@ export function ChristmasAdultScreen({ child, onBack, onNavigate }: Props) {
           </div>
         </div>
 
-        {/* Compras por tienda */}
-        {selectedWishes.length > 0 && (() => {
-          const byStore: Record<string, { total: number; items: typeof selectedWishes }> = {};
-          selectedWishes.forEach(w => {
-            const key = w.store ?? 'Sin tienda';
-            if (!byStore[key]) byStore[key] = { total: 0, items: [] };
-            byStore[key].total += w.price ?? 0;
-            byStore[key].items.push(w);
-          });
-          const stores = loadStores();
+        {/* Explorar por tienda */}
+        {(() => {
+          const stores = loadStores().filter(s => s.status === 'active');
+          const allProducts = loadProducts();
           return (
-            <div className="rounded-22 p-4 bg-white" style={{ boxShadow: '0 4px 20px rgba(45,106,79,.1)', border: '1.5px solid #E2D8CB' }}>
-              <p className="text-[12px] font-bold text-ink-muted uppercase tracking-wider mb-3">🏪 Compras por tienda</p>
-              {Object.entries(byStore).map(([storeId, data]) => {
-                const store = stores.find(s => s.id === storeId);
-                return (
-                  <div key={storeId} className="py-2.5 border-b border-line last:border-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-[14px] font-bold text-ink">
-                        {store?.logoEmoji ?? '🏪'} {store?.name ?? storeId}
-                      </p>
-                      <p className="text-[14px] font-bold" style={{ color: XMAS_GREEN }}>{fmtCLP(data.total)}</p>
+            <div>
+              <p className="text-[12px] font-bold text-ink-muted uppercase tracking-wider mb-2">🏪 Explorar por tienda</p>
+              <div className="flex flex-col gap-2">
+                {stores.map(store => {
+                  const storeProducts = allProducts.filter(p =>
+                    p.storeId === store.id &&
+                    p.status === 'published' &&
+                    p.price <= child.adultBudget &&
+                    (p.minAge ?? 0) <= child.age &&
+                    (child.interests.length === 0 || child.interests.some(i => p.interests.includes(i) || p.category === i))
+                  );
+                  if (storeProducts.length === 0) return null;
+                  const isOpen = activeStore === store.id;
+                  return (
+                    <div key={store.id} className="rounded-18 bg-white overflow-hidden"
+                      style={{ border: `1.5px solid ${isOpen ? XMAS_GREEN + '55' : '#E2D8CB'}` }}>
+                      <button
+                        onClick={() => setActiveStore(isOpen ? null : store.id)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-[24px]">{store.logoEmoji}</span>
+                          <div>
+                            <p className="text-[14px] font-bold text-ink">{store.name}</p>
+                            <p className="text-[12px] text-ink-muted">{storeProducts.length} regalo{storeProducts.length !== 1 ? 's' : ''} para {child.name}</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-ink-muted flex-shrink-0"
+                          style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
+                      </button>
+                      {isOpen && (
+                        <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+                          {storeProducts.map(p => (
+                            <div key={p.id} className="rounded-14 overflow-hidden bg-sand">
+                              {p.images?.[0] && (
+                                <img src={p.images[0]} alt="" className="w-full h-[80px] object-cover" />
+                              )}
+                              <div className="p-2">
+                                <p className="text-[11px] font-semibold text-ink line-clamp-2 leading-tight">{p.name}</p>
+                                <p className="text-[12px] font-bold mt-0.5" style={{ color: XMAS_GREEN }}>{fmtCLP(p.price)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-[12px] text-ink-muted">{data.items.map(w => w.name).join(', ')}</p>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           );
         })()}
@@ -237,9 +264,7 @@ export function ChristmasAdultScreen({ child, onBack, onNavigate }: Props) {
           return (
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <p className="text-[12px] font-bold uppercase tracking-wider" style={{ color: XMAS_GOLD }}>⭐ Selección patrocinada</p>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-6"
-                  style={{ background: `${XMAS_GOLD}22`, color: XMAS_GOLD }}>Patrocinado</span>
+                <p className="text-[12px] font-bold uppercase tracking-wider" style={{ color: XMAS_GOLD }}>⭐ Regalos destacados</p>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                 {sponsoredProducts.map(p => {
@@ -257,9 +282,6 @@ export function ChristmasAdultScreen({ child, onBack, onNavigate }: Props) {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-ink-muted mt-1.5 px-0.5">
-                Productos de tiendas que participan en GiftLoop. Siempre etiquetados como Patrocinado.
-              </p>
             </div>
           );
         })()}

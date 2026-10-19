@@ -243,9 +243,11 @@ function AuthScreen({ onAuth }: { onAuth: (u: AppUser) => void }) {
 
 // ─── RIGHT PANEL (desktop only) ──────────────────────────────────────────────
 import { FRIENDS_LIST } from './components/data';
+import { loadProducts as loadXmasProducts } from './screens/xmas-store-data';
 
 function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavigate: (s: string, d?: unknown) => void }) {
   const upcoming = FRIENDS_LIST.filter(f => f.daysUntil <= 60).slice(0, 4);
+  const ideasProducts = loadXmasProducts().filter(p => p.status === 'published').slice(0, 8);
   return (
     <aside className="hidden lg:flex flex-col gap-4 w-[260px] flex-shrink-0 sticky top-8 h-fit">
       {/* Tus regalos en curso */}
@@ -272,14 +274,17 @@ function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavig
 
       {/* Se vienen */}
       <div className="bg-white rounded-20 p-4 border border-line">
-        <p className="text-[13px] font-bold text-ink mb-3">Se vienen</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[13px] font-bold text-ink">Se vienen</p>
+          <button onClick={() => onNavigate('calendar')} className="text-[12px] text-coral font-semibold">Ver calendario</button>
+        </div>
         <div className="flex flex-col gap-2">
           {upcoming.map(f => {
             const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
             const d = new Date(); d.setDate(d.getDate() + f.daysUntil);
             const mon = months[d.getMonth()]; const day = d.getDate();
             return (
-              <button key={f.id} onClick={() => onNavigate('friend', f)} className="flex items-center gap-2.5 hover:bg-sand -mx-1 px-1 rounded-10 py-1 transition-colors">
+              <button key={f.id} onClick={() => onNavigate('calendar')} className="flex items-center gap-2.5 hover:bg-sand -mx-1 px-1 rounded-10 py-1 transition-colors">
                 <div className="w-9 h-9 rounded-10 bg-sand flex flex-col items-center justify-center flex-shrink-0">
                   <span className="text-[9px] font-bold text-coral leading-none">{mon}</span>
                   <span className="text-[14px] font-bold text-ink leading-none">{day}</span>
@@ -295,22 +300,28 @@ function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavig
         </div>
       </div>
 
-      {/* Ideas para tu lista */}
+      {/* Ideas para tu lista — scrollable, from real catalog */}
       <div className="bg-white rounded-20 p-4 border border-line">
-        <p className="text-[13px] font-bold text-ink mb-3">Ideas para tu lista</p>
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { name: 'Zapatillas running', price: '$64.990', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=80&fit=crop' },
-            { name: 'Pack de novelas', price: '$32.990', img: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=100&h=80&fit=crop' },
-          ].map(i => (
-            <div key={i.name} className="rounded-14 overflow-hidden bg-sand">
-              <img src={i.img} alt="" className="w-full h-[60px] object-cover" />
-              <div className="p-2">
-                <p className="text-[11px] font-semibold text-ink leading-tight">{i.name}</p>
-                <p className="text-[11px] font-bold text-coral">{i.price}</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[13px] font-bold text-ink">Ideas para tu lista</p>
+          <button onClick={() => onNavigate('christmas')} className="text-[12px] text-coral font-semibold">Ver todas</button>
+        </div>
+        <div className="flex flex-col gap-2 overflow-y-auto" style={{ maxHeight: 280, scrollbarWidth: 'none' }}>
+          {ideasProducts.map(p => {
+            const img = p.images?.[0] ?? '';
+            const priceStr = p.price.toLocaleString('es-CL');
+            return (
+              <div key={p.id} className="flex items-center gap-2.5">
+                <div className="w-12 h-12 rounded-12 overflow-hidden flex-shrink-0 bg-sand">
+                  {img ? <img src={img} alt="" className="w-full h-full object-cover" /> : <span className="text-[22px] flex items-center justify-center h-full">🎁</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold text-ink leading-tight line-clamp-2">{p.name}</p>
+                  <p className="text-[11px] font-bold text-coral mt-0.5">${priceStr}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

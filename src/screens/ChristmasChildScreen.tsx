@@ -48,8 +48,9 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
     }
     const utter = new SpeechSynthesisUtterance(script);
     utter.lang = 'es-ES';
-    utter.rate = 0.85;
-    utter.pitch = 0.75;
+    utter.rate = 0.78;
+    utter.pitch = 0.38;  // Very low pitch — deep old man voice
+    utter.volume = 1;
     utter.onend = () => setIsPlaying(false);
     utter.onerror = () => setIsPlaying(false);
     utteranceRef.current = utter;
@@ -58,7 +59,7 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
     setIsPlaying(true);
   };
 
-  const script = `¡Ho, ho, ho! ¡Hola, ${child.name}! Qué alegría saludarte desde el Polo Norte. Mis ayudantes me contaron que estás preparando tu carta de Navidad. Tengo algunas ideas para mostrarte, pero también puedes contarme qué te haría ilusión recibir. Elige tus favoritos y prepararemos tu carta juntos. Recuerda que es una lista de deseos: ¡no siempre pueden llegar todos los regalos!`;
+  const script = `¡Hohoho! ¡Hohoho! ¡Hola, ${child.name}! Qué alegría tan grande saludarte desde el Polo Norte. Mis ayudantes me contaron que estás preparando tu carta de Navidad. Tengo algunas ideas para mostrarte, pero también puedes contarme qué te haría ilusión recibir. Elige tus favoritos y prepararemos tu carta juntos. Recuerda, hohoho, que es una lista de deseos: ¡no siempre pueden llegar todos los regalos!`;
 
   // Build exclusion category list from adult config
   const excCats: string[] = child.exclusions.flatMap(e => {

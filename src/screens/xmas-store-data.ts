@@ -223,7 +223,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-jm-01', storeId: 'store-juguetemax', sku: 'JM-LEGO-CITY-001',
     brand: 'LEGO', name: 'Set LEGO City Policía', description: 'Set de construcción con comisaría, patrulla y 4 figuras. 240 piezas.',
-    images: ['https://images.unsplash.com/photo-1559060017-445fb9b0007c?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=300&h=300&fit=crop&auto=format'],
     category: 'construccion', subcategory: 'LEGO', minAge: 6, maxAge: 12,
     interests: ['construccion'],
     price: 24990, currency: 'CLP', prevPrice: 29990, stock: 15,
@@ -232,7 +232,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-jm-02', storeId: 'store-juguetemax', sku: 'JM-HASBRO-TREX-002',
     brand: 'Hasbro', name: 'Dinosaurio T-Rex articulado', description: 'Figura de T-Rex con articulaciones y rugido de sonido. 35 cm de largo.',
-    images: ['https://images.unsplash.com/photo-1565364887194-71fba5a5a89d?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1602526429747-ac387a91d43b?w=300&h=300&fit=crop&auto=format'],
     category: 'dinosaurios', subcategory: 'Figuras', minAge: 4, maxAge: 10,
     safetyWarnings: ['Piezas pequeñas para mayores de 3 años'],
     interests: ['dinosaurios', 'animales'],
@@ -242,7 +242,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-jm-03', storeId: 'store-juguetemax', sku: 'JM-ADI-FTBL-003',
     brand: 'Adidas', name: 'Pelota de fútbol oficial N°4', description: 'Pelota de fútbol cuero sintético, costura reforzada.',
-    images: ['https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=300&h=300&fit=crop&auto=format'],
     category: 'deportes', minAge: 3,
     interests: ['deportes'],
     price: 12990, currency: 'CLP', stock: 25,
@@ -256,7 +256,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-jm-04', storeId: 'store-juguetemax', sku: 'JM-FC-PINTURAS-004',
     brand: 'Faber-Castell', name: 'Set de pinturas y lienzos 12pcs', description: 'Kit completo con 6 pinceles, 12 tubos acrílicos y 2 lienzos.',
-    images: ['https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=300&h=300&fit=crop&auto=format'],
     category: 'arte', minAge: 5,
     interests: ['arte'],
     price: 15990, currency: 'CLP', stock: 12,
@@ -265,7 +265,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-jm-05', storeId: 'store-juguetemax', sku: 'JM-HAS-JENGA-005',
     brand: 'Hasbro', name: 'Jenga Gigante de madera', description: 'Jenga de madera maciza, piezas 3x más grandes que el original.',
-    images: ['https://images.unsplash.com/photo-1611996575749-79a3a250f948?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1611996575749-79a3a250f948?w=300&h=300&fit=crop&auto=format'],
     category: 'juegos', minAge: 6,
     interests: ['juegos'],
     price: 21990, currency: 'CLP', stock: 7,
@@ -274,7 +274,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-jm-06', storeId: 'store-juguetemax', sku: 'JM-ST-ACRYL-006',
     brand: 'Staedtler', name: 'Set acuarelas premium 36 colores', description: '36 colores en caja metálica, con pincel incluido y bloc A4.',
-    images: ['https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=300&h=300&fit=crop&auto=format'],
     category: 'arte', minAge: 6,
     interests: ['arte'],
     price: 11990, currency: 'CLP', stock: 20,
@@ -285,7 +285,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-lg-01', storeId: 'store-lego', sku: 'LG-STEGO-001',
     brand: 'LEGO', name: 'LEGO Dinos Stegosaurus', description: 'Construye un Stegosaurus articulado. 163 piezas. Serie Icons.',
-    images: ['https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=300&h=300&fit=crop&auto=format'],
     category: 'construccion', subcategory: 'LEGO Dinos', minAge: 7, maxAge: 14,
     interests: ['construccion', 'dinosaurios'],
     price: 27990, currency: 'CLP', stock: 5,
@@ -294,7 +294,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-lg-02', storeId: 'store-lego', sku: 'LG-BRIDGE-002',
     brand: 'LEGO', name: 'LEGO Technic Puente STEM', description: 'Set STEM con mecanismos de grúa. 412 piezas. Incluye instrucciones digitales.',
-    images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&auto=format'],
     category: 'construccion', subcategory: 'LEGO Technic', minAge: 8, maxAge: 14,
     interests: ['construccion', 'ciencia'],
     price: 34990, currency: 'CLP', stock: 3,
@@ -303,7 +303,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-lg-03', storeId: 'store-lego', sku: 'LG-CITY2-003',
     brand: 'LEGO', name: 'LEGO City Bomberos', description: 'Estación de bomberos con camión, helicóptero y 5 figuras. 380 piezas.',
-    images: ['https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=300&h=300&fit=crop&auto=format'],
     category: 'construccion', subcategory: 'LEGO City', minAge: 7, maxAge: 12,
     interests: ['construccion'],
     price: 44990, currency: 'CLP', prevPrice: 49990, stock: 4,
@@ -314,7 +314,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-ex-01', storeId: 'store-explora', sku: 'EX-EXCAV-001',
     brand: 'National Geographic', name: 'Kit dinosaurios excavación', description: 'Excava y descubre 3 réplicas de fósiles. Incluye cincel y guantes.',
-    images: ['https://images.unsplash.com/photo-1632784785887-1d6b2528cd15?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1632784785887-1d6b2528cd15?w=300&h=300&fit=crop&auto=format'],
     category: 'dinosaurios', subcategory: 'Kits de excavación', minAge: 6, maxAge: 12,
     interests: ['dinosaurios', 'ciencia'],
     price: 19990, currency: 'CLP', stock: 10,
@@ -323,7 +323,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-ex-02', storeId: 'store-explora', sku: 'EX-ENCICLODINO-002',
     brand: 'Planeta', name: 'Enciclopedia de Dinosaurios Ilustrada', description: 'Más de 300 páginas, 200 dinosaurios ilustrados con datos científicos actualizados.',
-    images: ['https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&h=300&fit=crop&auto=format'],
     category: 'libros', subcategory: 'Enciclopedias', minAge: 5,
     interests: ['dinosaurios', 'libros'],
     price: 14990, currency: 'CLP', stock: 18,
@@ -332,7 +332,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-ex-03', storeId: 'store-explora', sku: 'EX-VELOCI-003',
     brand: 'Mattel', name: 'Figura Velociraptor XL 45cm', description: 'Figura Velociraptor articulada de 45cm con texturas realistas y mandíbula articulada.',
-    images: ['https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1604076913837-52ab5629fde9?w=300&h=300&fit=crop&auto=format'],
     category: 'dinosaurios', subcategory: 'Figuras XL', minAge: 4, maxAge: 10,
     interests: ['dinosaurios', 'animales'],
     price: 16990, currency: 'CLP', stock: 6,
@@ -341,7 +341,7 @@ export const STORE_CATALOG: StoreProduct[] = [
   {
     id: 'sp-ex-04', storeId: 'store-explora', sku: 'EX-QUIM-004',
     brand: 'Science4You', name: 'Kit Química para Jóvenes Científicos', description: 'Laboratorio de química con 50 experimentos seguros para niños. Incluye bata y gafas.',
-    images: ['https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=300&h=300&fit=crop'],
+    images: ['https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=300&h=300&fit=crop&auto=format'],
     category: 'ciencia', subcategory: 'Laboratorio', minAge: 8, maxAge: 14,
     safetyWarnings: ['Usar con supervisión adulta'],
     interests: ['ciencia'],
