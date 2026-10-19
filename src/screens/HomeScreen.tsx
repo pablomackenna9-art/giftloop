@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Users, MessageCircle, Plus } from 'lucide-react';
 import { Button, IconButton, GiftBox3D, HERO_BOX, EMPTY_HOME_BOX, Toast, fmt } from '../components/base';
-import { FRIENDS_LIST, CAMILA, EXPLORE_CATALOG } from '../components/data';
+import { FRIENDS_LIST, CAMILA } from '../components/data';
+import { loadProducts } from './xmas-store-data';
+import { loadChildren } from './xmas-data';
 import type { AppUser } from '../App';
 
 type Props = {
@@ -12,6 +14,18 @@ type Props = {
 export function HomeScreen({ currentUser, onNavigate }: Props) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState('');
+
+  // Ideas catalog: products from xmas catalog, sorted by child interests
+  const ideasCatalog = useMemo(() => {
+    const children = loadChildren();
+    const interests = children.flatMap(c => c.interests);
+    const products = loadProducts().filter(p => p.status === 'published');
+    const scored = products.map(p => ({
+      ...p,
+      _score: interests.includes(p.category) ? 2 : (interests.some(i => p.interests?.includes(i)) ? 1 : 0),
+    })).sort((a, b) => b._score - a._score);
+    return scored.slice(0, 12);
+  }, []);
 
   const showToast = (m: string) => { setToast(m); };
 
@@ -169,19 +183,21 @@ export function HomeScreen({ currentUser, onNavigate }: Props) {
       <div>
         <div className="flex items-center justify-between px-5 mb-3">
           <h2 className="font-display text-[20px] font-[700]">Ideas para tu lista</h2>
-          <button onClick={() => onNavigate('explore')} className="text-[14px] font-semibold text-coral-text">Explorar</button>
+          <button onClick={() => onNavigate('christmas')} className="text-[14px] font-semibold text-coral-text">Ver todas</button>
         </div>
         <div className="flex gap-3 overflow-x-auto px-5 pb-1" style={{ scrollbarWidth: 'none' }}>
-          {EXPLORE_CATALOG.map(item => {
+          {ideasCatalog.map(item => {
             const saved = savedIds.has(item.id);
+            const img = item.images?.[0] ?? '';
             return (
               <div key={item.id} className="flex-shrink-0" style={{ width: 150 }}>
                 <div className="relative rounded-20 overflow-hidden" style={{ height: 170 }}>
-                  <img src={item.image} alt="" className="w-full h-full object-cover" />
+                  {img && <img src={img} alt="" className="w-full h-full object-cover" />}
+                  {!img && <div className="w-full h-full bg-sand flex items-center justify-center text-[40px]">🎁</div>}
                   <button
                     onClick={() => {
                       setSavedIds(prev => { const s = new Set(prev); s.has(item.id) ? s.delete(item.id) : s.add(item.id); return s; });
-                      if (!saved) showToast('Guardado en Cumple 30');
+                      if (!saved) showToast(`${item.name} guardado`);
                     }}
                     className="absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center"
                     style={{ background: saved ? '#557A65' : '#FAF7F2', boxShadow: '0 2px 8px rgba(0,0,0,.15)' }}>

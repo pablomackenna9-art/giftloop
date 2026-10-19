@@ -168,6 +168,37 @@ export function ChristmasAdultScreen({ child, onBack, onNavigate }: Props) {
           </div>
         </div>
 
+        {/* Compras por tienda */}
+        {selectedWishes.length > 0 && (() => {
+          const byStore: Record<string, { total: number; items: typeof selectedWishes }> = {};
+          selectedWishes.forEach(w => {
+            const key = w.store ?? 'Sin tienda';
+            if (!byStore[key]) byStore[key] = { total: 0, items: [] };
+            byStore[key].total += w.price ?? 0;
+            byStore[key].items.push(w);
+          });
+          const stores = loadStores();
+          return (
+            <div className="rounded-22 p-4 bg-white" style={{ boxShadow: '0 4px 20px rgba(45,106,79,.1)', border: '1.5px solid #E2D8CB' }}>
+              <p className="text-[12px] font-bold text-ink-muted uppercase tracking-wider mb-3">🏪 Compras por tienda</p>
+              {Object.entries(byStore).map(([storeId, data]) => {
+                const store = stores.find(s => s.id === storeId);
+                return (
+                  <div key={storeId} className="py-2.5 border-b border-line last:border-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[14px] font-bold text-ink">
+                        {store?.logoEmoji ?? '🏪'} {store?.name ?? storeId}
+                      </p>
+                      <p className="text-[14px] font-bold" style={{ color: XMAS_GREEN }}>{fmtCLP(data.total)}</p>
+                    </div>
+                    <p className="text-[12px] text-ink-muted">{data.items.map(w => w.name).join(', ')}</p>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
         {/* Favorites */}
         {favorites.length > 0 && (
           <div>

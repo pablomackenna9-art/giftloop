@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { ChevronLeft, Star, X, Send } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, Star, X, Send, Volume2, VolumeX } from 'lucide-react';
 import {
   INTERESTS, loadWishes, saveWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP
 } from './xmas-data';
 import type { ChildProfile, XmasWish } from './xmas-data';
-import { loadProducts } from './xmas-store-data';
+import { loadProducts, loadStores } from './xmas-store-data';
 import type { StoreProduct } from './xmas-store-data';
 
 type Phase = 'video' | 'workshop' | 'favorites' | 'letter' | 'sent';
@@ -33,7 +33,30 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
   const [freeText, setFreeText] = useState('');
   const [showFreeInput, setShowFreeInput] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeBrand, setActiveBrand] = useState<string | null>(null);
   const [letterDecor, setLetterDecor] = useState('🎄');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
+
+  const toggleSpeech = () => {
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      return;
+    }
+    const utter = new SpeechSynthesisUtterance(script);
+    utter.lang = 'es-ES';
+    utter.rate = 0.85;
+    utter.pitch = 0.75;
+    utter.onend = () => setIsPlaying(false);
+    utter.onerror = () => setIsPlaying(false);
+    utteranceRef.current = utter;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+    setIsPlaying(true);
+  };
 
   const script = `¡Ho, ho, ho! ¡Hola, ${child.name}! Qué alegría saludarte desde el Polo Norte. Mis ayudantes me contaron que estás preparando tu carta de Navidad. Tengo algunas ideas para mostrarte, pero también puedes contarme qué te haría ilusión recibir. Elige tus favoritos y prepararemos tu carta juntos. Recuerda que es una lista de deseos: ¡no siempre pueden llegar todos los regalos!`;
 
@@ -159,27 +182,39 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
             Del {child.santaName} desde el Polo Norte 🎄
           </p>
 
-          {/* Simulated video player */}
+          {/* Audio player con voz del Viejo Pascuero */}
           <div className="w-full rounded-22 overflow-hidden mb-6" style={{ background: '#0D2218', border: '2px solid rgba(255,255,255,.15)' }}>
-            <div className="aspect-video flex flex-col items-center justify-center gap-3 px-6">
-              <img src="/santa-real.jpg" alt="" className="w-16 h-16 rounded-full object-cover object-top opacity-80" style={{ border: '2px solid rgba(255,255,255,.3)' }} />
-              <p className="text-[12px] text-white text-center font-medium" style={{ opacity: .7 }}>
-                DEMOSTRACIÓN · Saludo personalizado
-              </p>
+            <div className="flex flex-col items-center justify-center gap-3 px-6 py-6">
+              <div className="relative">
+                <img src="/santa-real.jpg" alt="" className="w-16 h-16 rounded-full object-cover object-top opacity-80" style={{ border: '2px solid rgba(255,255,255,.3)' }} />
+                {isPlaying && (
+                  <div className="absolute inset-0 rounded-full animate-ping" style={{ background: `${XMAS_GOLD}30` }} />
+                )}
+              </div>
               <p className="text-[13px] text-white text-center leading-relaxed" style={{ opacity: .9 }}>
                 "{script}"
               </p>
             </div>
             <div className="flex items-center gap-3 px-4 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,.1)' }}>
-              <div className="flex gap-2">
-                {['⏮', '⏸', '⏭'].map(c => (
-                  <button key={c} className="text-white text-[18px]" style={{ opacity: .7 }}>{c}</button>
-                ))}
+              <div className="flex gap-2 items-center">
+                <button onClick={() => { window.speechSynthesis.cancel(); setIsPlaying(false); }}
+                  className="text-white text-[18px]" style={{ opacity: .7 }}>⏮</button>
+                <button onClick={toggleSpeech}
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: isPlaying ? XMAS_GOLD : 'rgba(255,255,255,.15)' }}>
+                  {isPlaying
+                    ? <VolumeX size={18} className="text-ink" />
+                    : <Volume2 size={18} className="text-white" />}
+                </button>
+                <button onClick={() => { window.speechSynthesis.cancel(); setIsPlaying(false); setPhase('workshop'); }}
+                  className="text-white text-[18px]" style={{ opacity: .7 }}>⏭</button>
               </div>
               <div className="flex-1 h-1 rounded-full" style={{ background: 'rgba(255,255,255,.2)' }}>
-                <div className="h-full w-2/3 rounded-full" style={{ background: XMAS_GOLD }} />
+                <div className="h-full rounded-full transition-all" style={{ width: isPlaying ? '60%' : '0%', background: XMAS_GOLD }} />
               </div>
-              <span className="text-white text-[12px]" style={{ opacity: .7 }}>CC</span>
+              <span className="text-white text-[11px] font-medium" style={{ opacity: .7 }}>
+                {isPlaying ? '🔊 Escuchando' : '▶ Escuchar'}
+              </span>
             </div>
           </div>
 
@@ -292,6 +327,64 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
             );
           })}
         </div>
+
+        {/* Tiendas participantes */}
+        {(() => {
+          const stores = loadStores();
+          return (
+            <div className="px-5 mt-5">
+              <p className="text-[13px] font-bold text-ink-muted uppercase tracking-wider mb-3">🏪 Tiendas participantes</p>
+              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                {stores.map(store => (
+                  <button key={store.id}
+                    onClick={() => setActiveBrand(activeBrand === store.id ? null : store.id)}
+                    className="flex-shrink-0 rounded-18 px-4 py-3 text-left transition-all"
+                    style={{
+                      background: activeBrand === store.id ? XMAS_GREEN : 'white',
+                      border: activeBrand === store.id ? `2px solid ${XMAS_GREEN}` : '1.5px solid #E2D8CB',
+                      minWidth: 120,
+                    }}>
+                    <p className="text-[22px] leading-none mb-1">{store.logoEmoji}</p>
+                    <p className="text-[13px] font-bold" style={{ color: activeBrand === store.id ? 'white' : '#302238' }}>{store.name}</p>
+                    <p className="text-[11px]" style={{ color: activeBrand === store.id ? 'rgba(255,255,255,.7)' : '#8A7D90' }}>
+                      {allProducts.filter(p => p.storeId === store.id && p.status === 'published').length} productos
+                    </p>
+                  </button>
+                ))}
+              </div>
+              {activeBrand && (() => {
+                const brandProducts = allProducts.filter(p => p.storeId === activeBrand && p.status === 'published');
+                return (
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {brandProducts.map(item => {
+                      const inCart = isInCart(item.id);
+                      const img = item.images?.[0] ?? '';
+                      return (
+                        <div key={item.id} className="rounded-18 overflow-hidden bg-white"
+                          style={{ border: inCart ? `2px solid ${XMAS_GREEN}` : '1.5px solid #EAE2D6' }}>
+                          {img && <img src={img} alt={item.name} className="w-full h-[110px] object-cover" />}
+                          <div className="p-2.5">
+                            <p className="text-[12px] font-semibold text-ink leading-snug line-clamp-2 mb-1">{item.name}</p>
+                            <p className="text-[12px] font-bold mb-2" style={{ color: XMAS_GREEN }}>{fmtCLP(item.price)}</p>
+                            <button onClick={() => toggleItem(item)}
+                              className="w-full h-8 rounded-10 text-[12px] font-bold transition-all"
+                              style={{
+                                background: inCart ? 'white' : XMAS_RED,
+                                color: inCart ? XMAS_RED : 'white',
+                                border: inCart ? `1.5px solid ${XMAS_RED}` : 'none',
+                              }}>
+                              {inCart ? '✓ En carta' : '¡Me gusta!'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        })()}
 
         {/* Free wish card */}
         <div className="px-5 mt-4">
