@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Share } from 'lucide-react';
 import { Button, Chip, Sheet, Toast, GiftBox3D, EMPTY_PROFILE_BOX, fmt } from '../components/base';
-import { MY_LISTS, MY_WISHES } from '../components/data';
+import { MY_LISTS, MY_WISHES, FRIENDS_LIST } from '../components/data';
 import type { AppUser } from '../App';
 
 type Props = {
@@ -30,7 +30,7 @@ export function ProfileScreen({ currentUser, onNavigate, onLogout }: Props) {
         <div>
           <h1 className="font-display text-[26px] font-[800] text-ink">{currentUser.name}</h1>
           <p className="text-[14px] text-ink-muted">@{currentUser.username} · cumple 14 nov</p>
-          <p className="text-[14px] text-ink-muted mt-0.5"><strong className="text-ink">86</strong> amigos · <strong className="text-ink">{wishes.length}</strong> deseos</p>
+          <p className="text-[14px] text-ink-muted mt-0.5"><strong className="text-ink">{FRIENDS_LIST.length}</strong> amigos · <strong className="text-ink">{wishes.length}</strong> deseos</p>
         </div>
         <div className="flex gap-2.5">
           <button onClick={() => setShowShare(true)}
@@ -108,7 +108,8 @@ export function ProfileScreen({ currentUser, onNavigate, onLogout }: Props) {
         ) : (
           <div className="flex flex-col gap-2">
             {wishes.map(w => (
-              <div key={w.id} className="bg-white rounded-18 p-2.5 flex items-center gap-3 border border-line">
+              <button key={w.id} onClick={() => onNavigate('wish', w)}
+                className="bg-white rounded-18 p-2.5 flex items-center gap-3 border border-line w-full text-left">
                 <img src={w.image} alt="" className="w-16 h-16 rounded-14 object-cover flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-semibold text-ink leading-tight line-clamp-2">{w.name}</p>
@@ -119,7 +120,7 @@ export function ProfileScreen({ currentUser, onNavigate, onLogout }: Props) {
                     <span className="inline-block mt-1 px-2 py-0.5 rounded-10 bg-ink text-cream text-[11px] font-bold">Experiencia</span>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -144,7 +145,7 @@ export function ProfileScreen({ currentUser, onNavigate, onLogout }: Props) {
             const labels = { private: 'Privada', friends: 'Amigos', link: 'Con enlace' };
             const descs = {
               private: 'Solo tú la ves. Útil mientras la armas.',
-              friends: 'Tus 86 amigos la verán en tu perfil y recibirán un aviso 7 días antes de tu cumple.',
+              friends: `Tus ${FRIENDS_LIST.length} amigos la verán en tu perfil y recibirán un aviso 7 días antes de tu cumple.`,
               link: 'Cualquiera con el enlace, sin cuenta.',
             };
             return (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { Button, Sheet, Toast, ParticipantBadge, Spinner, fmt } from '../components/base';
 import { CAMILA_WISHES, GROUP_MEMBERS } from '../components/data';
+import type { GroupMember } from '../components/data';
 
 type Props = {
   onBack: () => void;
@@ -18,6 +19,7 @@ export function GroupScreen({ onBack, onNavigate }: Props) {
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState('');
   const [reunido, setReunido] = useState(210000);
+  const [members, setMembers] = useState<GroupMember[]>(GROUP_MEMBERS);
   const goal = wish.price;
   const pct = Math.round((reunido / goal) * 100);
 
@@ -92,9 +94,9 @@ export function GroupScreen({ onBack, onNavigate }: Props) {
 
         {/* Participants */}
         <div>
-          <h3 className="font-display text-[18px] font-[700] mb-3">Participantes · {GROUP_MEMBERS.length}</h3>
+          <h3 className="font-display text-[18px] font-[700] mb-3">Participantes · {members.length}</h3>
           <div className="flex flex-col gap-2.5">
-            {GROUP_MEMBERS.map(m => (
+            {members.map(m => (
               <div key={m.id} className="flex items-center gap-3">
                 <img src={m.avatar} alt="" className="w-[42px] h-[42px] rounded-full object-cover" />
                 <p className="text-[15px] font-semibold text-ink flex-1">{m.name}</p>
@@ -193,6 +195,7 @@ export function GroupScreen({ onBack, onNavigate }: Props) {
             </p>
             <Button variant="primary" size="lg" onClick={() => {
               setReunido(r => r + selectedAmount);
+              setMembers(prev => prev.map(m => m.id === 'sofia' ? { ...m, status: 'paid' } : m));
               setShowAporte(false);
               setPayStatus('idle');
               setToast(`Aportaste ${fmt(selectedAmount)} al grupo.`);

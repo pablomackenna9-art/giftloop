@@ -47,7 +47,7 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
       return;
     }
     const utter = new SpeechSynthesisUtterance(script);
-    utter.lang = 'es-ES';
+    utter.lang = 'es-CL';
     utter.rate = 0.78;
     utter.pitch = 0.38;  // Very low pitch — deep old man voice
     utter.volume = 1;

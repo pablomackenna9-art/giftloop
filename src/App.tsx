@@ -304,14 +304,14 @@ function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavig
       <div className="bg-white rounded-20 p-4 border border-line">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[13px] font-bold text-ink">Ideas para tu lista</p>
-          <button onClick={() => onNavigate('christmas')} className="text-[12px] text-coral font-semibold">Ver todas</button>
+          <button onClick={() => onNavigate('explore')} className="text-[12px] text-coral font-semibold">Ver todas</button>
         </div>
         <div className="flex flex-col gap-2 overflow-y-auto" style={{ maxHeight: 280, scrollbarWidth: 'none' }}>
           {ideasProducts.map(p => {
             const img = p.images?.[0] ?? '';
             const priceStr = p.price.toLocaleString('es-CL');
             return (
-              <div key={p.id} className="flex items-center gap-2.5">
+              <button key={p.id} onClick={() => onNavigate('add', p)} className="flex items-center gap-2.5 w-full text-left">
                 <div className="w-12 h-12 rounded-12 overflow-hidden flex-shrink-0 bg-sand">
                   {img ? <img src={img} alt="" className="w-full h-full object-cover" /> : <span className="text-[22px] flex items-center justify-center h-full">🎁</span>}
                 </div>
@@ -319,7 +319,7 @@ function RightPanel({ currentUser, onNavigate }: { currentUser: AppUser; onNavig
                   <p className="text-[11px] font-semibold text-ink leading-tight line-clamp-2">{p.name}</p>
                   <p className="text-[11px] font-bold text-coral mt-0.5">${priceStr}</p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

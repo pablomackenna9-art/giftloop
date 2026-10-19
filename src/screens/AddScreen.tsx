@@ -14,57 +14,23 @@ type Step = 'input' | 'loading' | 'review';
 
 async function scrapeProduct(rawUrl: string): Promise<{ name: string; image: string; price: string; domain: string }> {
   const domain = (() => { try { return new URL(rawUrl).hostname.replace('www.', ''); } catch { return ''; } })();
-  const getMeta = (doc: Document, attr: string, val: string) =>
-    doc.querySelector(`meta[${attr}="${val}"]`)?.getAttribute('content') ?? '';
 
-  const proxies = [
-    `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(rawUrl)}`,
-  ];
+  const resp = await fetch(`/api/scrape?url=${encodeURIComponent(rawUrl)}`, {
+    signal: AbortSignal.timeout(15000),
+  });
 
-  for (let i = 0; i < proxies.length; i++) {
-    try {
-      const resp = await fetch(proxies[i], { signal: AbortSignal.timeout(10000) });
-      if (!resp.ok) continue;
-      const html = proxies[i].includes('allorigins')
-        ? ((await resp.json()) as { contents?: string }).contents ?? ''
-        : await resp.text();
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-      const doc = new DOMParser().parseFromString(html, 'text/html');
+  const data = await resp.json() as { name?: string; image?: string; price?: string; domain?: string; error?: string };
+  if (data.error) throw new Error(data.error);
+  if (!data.name) throw new Error('Sin datos');
 
-      const name = (
-        getMeta(doc, 'property', 'og:title') ||
-        getMeta(doc, 'name', 'twitter:title') ||
-        doc.querySelector('title')?.textContent?.trim() || ''
-      ).replace(/\s*[-|].*$/, '').trim().slice(0, 120);
-
-      const image =
-        getMeta(doc, 'property', 'og:image') ||
-        getMeta(doc, 'property', 'og:image:url') ||
-        getMeta(doc, 'name', 'twitter:image') || '';
-
-      let price =
-        getMeta(doc, 'property', 'product:price:amount') ||
-        getMeta(doc, 'property', 'og:price:amount') ||
-        getMeta(doc, 'property', 'product:price') || '';
-
-      if (!price) {
-        doc.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
-          if (price) return;
-          try {
-            const d = JSON.parse(s.textContent ?? '') as Record<string, unknown>;
-            const offers = (d.offers ?? (Array.isArray(d) ? (d[0] as Record<string, unknown>)?.offers : null)) as Record<string, unknown> | null;
-            if (offers?.price) price = String(offers.price);
-            else if (Array.isArray(offers) && (offers[0] as Record<string, unknown>)?.price) price = String((offers[0] as Record<string, unknown>).price);
-          } catch { /* ignore */ }
-        });
-      }
-
-      const priceClean = price.replace(/[^0-9]/g, '');
-      if (name) return { name, image, price: priceClean, domain };
-    } catch { /* try next proxy */ }
-  }
-  throw new Error('No se pudo leer esa tienda');
+  return {
+    name: data.name ?? '',
+    image: data.image ?? '',
+    price: data.price ?? '',
+    domain: data.domain ?? domain,
+  };
 }
 
 export function AddScreen({ onBack, onNavigate, isExperience = false }: Props) {

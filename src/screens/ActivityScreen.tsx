@@ -8,11 +8,25 @@ type Props = {
   onAddCalendarEvent?: (ev: CalendarEvent) => void;
 };
 
+function readLS(key: string): boolean | null {
+  const v = localStorage.getItem(key);
+  return v === null ? null : v === 'true';
+}
+
 export function ActivityScreen({ onNavigate, onAddCalendarEvent }: Props) {
-  const [eventAccepted, setEventAccepted] = useState<boolean | null>(null);
-  const [groupAccepted, setGroupAccepted] = useState<boolean | null>(null);
+  const [eventAccepted, setEventAccepted] = useState<boolean | null>(() => readLS('gl_ev_javiera'));
+  const [groupAccepted, setGroupAccepted] = useState<boolean | null>(() => readLS('gl_grp_camila'));
   const [toast, setToast] = useState('');
   const [reserved, setReserved] = useState(false);
+
+  const acceptEvent = (v: boolean) => {
+    setEventAccepted(v);
+    localStorage.setItem('gl_ev_javiera', String(v));
+  };
+  const acceptGroup = (v: boolean) => {
+    setGroupAccepted(v);
+    localStorage.setItem('gl_grp_camila', String(v));
+  };
 
   return (
     <div className="flex flex-col pb-[120px]" style={{ gap: 24, padding: '8px 20px 120px' }}>
@@ -34,7 +48,7 @@ export function ActivityScreen({ onNavigate, onAddCalendarEvent }: Props) {
             </div>
             <div className="flex gap-2">
               <button onClick={() => {
-                  setGroupAccepted(true);
+                  acceptGroup(true);
                   setToast('¡Participas en el regalo de Camila! 🎁');
                   onNavigate('group');
                 }}
@@ -42,7 +56,7 @@ export function ActivityScreen({ onNavigate, onAddCalendarEvent }: Props) {
                 Participar
               </button>
               <button onClick={() => {
-                  setGroupAccepted(false);
+                  acceptGroup(false);
                   setToast('Declinaste la invitación.');
                 }}
                 className="h-12 px-4 rounded-18 text-ink text-[14px] font-semibold"
@@ -84,7 +98,7 @@ export function ActivityScreen({ onNavigate, onAddCalendarEvent }: Props) {
             </p>
             <div className="flex gap-2">
               <button onClick={() => {
-                  setEventAccepted(true);
+                  acceptEvent(true);
                   setToast('¡Vas a la once de Javiera! Se agregó al calendario 🎉');
                   onAddCalendarEvent?.({
                     id: 'once_javiera',
@@ -97,7 +111,7 @@ export function ActivityScreen({ onNavigate, onAddCalendarEvent }: Props) {
                 className="flex-1 h-11 rounded-16 bg-ink text-cream text-[14px] font-bold">
                 Voy
               </button>
-              <button onClick={() => setEventAccepted(false)}
+              <button onClick={() => acceptEvent(false)}
                 className="flex-1 h-11 rounded-16 border border-ink text-ink text-[14px] font-semibold">
                 Ahora no
               </button>

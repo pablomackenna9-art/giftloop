@@ -27,8 +27,24 @@ type Props = {
   onNavigate: (screen: string, data?: unknown) => void;
 };
 
+function getHandledIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem('gl_handled_requests');
+    return new Set(raw ? JSON.parse(raw) as string[] : []);
+  } catch { return new Set(); }
+}
+function saveHandledId(id: string) {
+  try {
+    const s = getHandledIds();
+    s.add(id);
+    localStorage.setItem('gl_handled_requests', JSON.stringify([...s]));
+  } catch { /* ignore */ }
+}
+
 export function FriendsScreen({ onBack, followStatus, onFollow, onAccept, onReject, onNavigate }: Props) {
-  const [requests, setRequests] = useState(FRIEND_REQUESTS);
+  const [requests, setRequests] = useState(() =>
+    FRIEND_REQUESTS.filter(r => !getHandledIds().has(r.id))
+  );
   const [toast, setToast] = useState('');
   const [q, setQ] = useState('');
 
@@ -44,7 +60,7 @@ export function FriendsScreen({ onBack, followStatus, onFollow, onAccept, onReje
     !FRIENDS_LIST.some(f => f.id === u.id) && followStatus[u.id] === 'friends'
   );
   const friends = [
-    ...FRIENDS_LIST.filter(f => followStatus[f.id] === 'friends'),
+    ...FRIENDS_LIST.filter(f => followStatus[f.id] !== 'none'),
     ...acceptedRequestUsers,
   ];
   const suggestions = SUGGESTED_FRIENDS.filter(s => !followStatus[s.id] || followStatus[s.id] === 'none' || followStatus[s.id] === 'pending');
@@ -64,11 +80,13 @@ export function FriendsScreen({ onBack, followStatus, onFollow, onAccept, onReje
 
   const handleAccept = (r: typeof FRIEND_REQUESTS[0]) => {
     onAccept(r.id);
+    saveHandledId(r.id);
     setRequests(prev => prev.filter(x => x.id !== r.id));
     setToast(`Ahora eres amiga de ${r.name} 🎉`);
   };
   const handleReject = (r: typeof FRIEND_REQUESTS[0]) => {
     onReject(r.id);
+    saveHandledId(r.id);
     setRequests(prev => prev.filter(x => x.id !== r.id));
   };
 
