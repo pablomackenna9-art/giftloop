@@ -1,3 +1,5 @@
+import scrapeHandler from '../../api/scrape.js';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -23,6 +25,7 @@ app.use(express.json());
 
 /** Legacy compatibility: /scrape?url=... */
 app.get('/scrape', extractProductHandler);
+app.get('/api/scrape', (req, res) => scrapeHandler(req as unknown as VercelRequest, res as unknown as VercelResponse));
 
 /** New clean route */
 app.get('/api/extract-product', extractProductHandler);

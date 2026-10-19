@@ -1,3 +1,4 @@
+import { usePurchaseRequests } from '../lib/use-purchase-requests';
 import { useState } from 'react';
 import { ChevronLeft, Check, X, Package } from 'lucide-react';
 import {
@@ -137,7 +138,7 @@ function ProposalForm({ request, onConfirm, onCancel }: {
 
 export function StorePanelScreen({ storeId, onBack }: Props) {
   const [tab, setTab] = useState<StoreTab>('nuevas');
-  const [requests, setRequests] = useState<PurchaseRequest[]>(loadRequests);
+  const [requests, setRequests] = usePurchaseRequests();
   const [proposalTarget, setProposalTarget] = useState<PurchaseRequest | null>(null);
   const stores = loadStores();
   const store = stores.find(s => s.id === storeId);
@@ -154,7 +155,7 @@ export function StorePanelScreen({ storeId, onBack }: Props) {
     const updated = requests.map(r => r.id === id
       ? { ...r, status, history: [...r.history, { status, by: 'store' as const, at: now, note }] }
       : r);
-    setRequests(updated); saveRequests(updated);
+    void saveRequests(updated).then(() => setRequests(updated)).catch(() => {});
   };
 
   const acceptAndReview = (id: string) => updateStatus(id, 'in_review', 'Tienda comenzó revisión');
@@ -164,7 +165,7 @@ export function StorePanelScreen({ storeId, onBack }: Props) {
     const updated = requests.map(r => r.id === req.id
       ? { ...r, status: 'proposal_ready' as RequestStatus, proposal, history: [...r.history, { status: 'proposal_ready' as RequestStatus, by: 'store' as const, at: now }] }
       : r);
-    setRequests(updated); saveRequests(updated); setProposalTarget(null);
+    void saveRequests(updated).then(() => { setRequests(updated); setProposalTarget(null); }).catch(() => {});
   };
 
   const confirmPaymentDemo = (id: string) => {
@@ -183,7 +184,7 @@ export function StorePanelScreen({ storeId, onBack }: Props) {
         history: [...r.history, { status: 'dispatched' as RequestStatus, by: 'store' as const, at: now, note: `Tracking: ${code}` }],
       };
     });
-    setRequests(updated); saveRequests(updated);
+    void saveRequests(updated).then(() => setRequests(updated)).catch(() => {});
   };
 
   if (proposalTarget) {

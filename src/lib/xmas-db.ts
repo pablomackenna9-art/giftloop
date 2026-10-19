@@ -1,4 +1,11 @@
 import { supabase } from './supabase';
+
+const pending = new Map<string, Promise<void>>();
+function enqueue(userId: string, action: () => Promise<void>): Promise<void> {
+  const next = (pending.get(userId) ?? Promise.resolve()).catch(() => {}).then(action);
+  pending.set(userId, next);
+  return next;
+}
 import type { ChildProfile, XmasWish } from '../screens/xmas-data';
 
 // ─── CHILDREN ─────────────────────────────────────────────────────────────────
@@ -47,18 +54,19 @@ export async function dbLoadChildren(userId: string): Promise<ChildProfile[]> {
     .select('*')
     .eq('user_id', userId)
     .order('created_at');
-  if (error) { console.error('dbLoadChildren:', error); return []; }
+  if (error) throw error;
   return (data ?? []).map(rowToChild);
 }
 
 export async function dbSaveChildren(userId: string, children: ChildProfile[]): Promise<void> {
-  if (!supabase) return;
-  // Upsert all children
   const rows = children.map(c => childToRow(userId, c));
-  if (rows.length > 0) {
+  return enqueue(userId, async () => {
+    if (!supabase || rows.length === 0) return;
     const { error } = await supabase.from('children').upsert(rows, { onConflict: 'id' });
-    if (error) console.error('dbSaveChildren upsert:', error);
-  }
+    if (error) throw error;
+    const key = `gl:${userId}:pending_children`;
+    if (localStorage.getItem(key) === JSON.stringify(children)) localStorage.removeItem(key);
+  });
 }
 
 export async function dbDeleteChild(childId: string): Promise<void> {
@@ -73,6 +81,7 @@ function rowToWish(row: Record<string, unknown>): XmasWish {
   return {
     id: row['id'] as string,
     childId: row['child_id'] as string,
+    productId: row['product_id'] as string | undefined,
     name: row['name'] as string,
     price: (row['price'] as number | undefined) ?? 0,
     image: row['image'] as string | undefined,
@@ -90,6 +99,7 @@ function wishToRow(childId: string, wish: XmasWish) {
   return {
     id: wish.id,
     child_id: childId,
+    product_id: wish.productId ?? null,
     name: wish.name,
     price: wish.price ?? 0,
     image: wish.image ?? null,
@@ -110,17 +120,19 @@ export async function dbLoadWishes(childId: string): Promise<XmasWish[]> {
     .select('*')
     .eq('child_id', childId)
     .order('created_at');
-  if (error) { console.error('dbLoadWishes:', error); return []; }
+  if (error) throw error;
   return (data ?? []).map(rowToWish);
 }
 
-export async function dbSaveAllWishes(childId: string, wishes: XmasWish[]): Promise<void> {
-  if (!supabase) return;
-  await supabase.from('xmas_wishes').delete().eq('child_id', childId);
-  if (wishes.length === 0) return;
+export async function dbSaveAllWishes(userId: string, childId: string, wishes: XmasWish[]): Promise<void> {
   const rows = wishes.map(w => wishToRow(childId, w));
-  const { error } = await supabase.from('xmas_wishes').insert(rows);
-  if (error) console.error('dbSaveAllWishes:', error);
+  return enqueue(userId, async () => {
+    if (!supabase) return;
+    const { error } = await supabase.rpc('replace_xmas_wishes', { p_child_id: childId, p_wishes: rows });
+    if (error) throw error;
+    const key = `gl:${userId}:pending_wishes_${childId}`;
+    if (localStorage.getItem(key) === JSON.stringify(wishes)) localStorage.removeItem(key);
+  });
 }
 
 // ─── STORES ───────────────────────────────────────────────────────────────────
@@ -183,19 +195,18 @@ export async function dbLoadCampaigns() {
 // ─── SYNC: pull Supabase → localStorage on login ──────────────────────────────
 
 export async function syncFromSupabase(userId: string): Promise<void> {
-  try {
-    // Sync children + their wishes
-    const children = await dbLoadChildren(userId);
-    if (children.length > 0) {
-      localStorage.setItem('xmas_children', JSON.stringify(children));
-      await Promise.all(children.map(async child => {
-        const wishes = await dbLoadWishes(child.id);
-        if (wishes.length > 0) {
-          localStorage.setItem(`xmas_wishes_${child.id}`, JSON.stringify(wishes));
-        }
-      }));
-    }
-  } catch (e) {
-    console.error('syncFromSupabase error:', e);
+  const pendingChildren = localStorage.getItem(`gl:${userId}:pending_children`);
+  if (pendingChildren) await dbSaveChildren(userId, JSON.parse(pendingChildren));
+  const prefix = `gl:${userId}:pending_wishes_`;
+  const keys = Object.keys(localStorage).filter(key => key.startsWith(prefix));
+  for (const key of keys) {
+    const value = localStorage.getItem(key);
+    if (value) await dbSaveAllWishes(userId, key.slice(prefix.length), JSON.parse(value));
+  }
+  const children = await dbLoadChildren(userId);
+  const lists = await Promise.all(children.map(async child => ({ child, wishes: await dbLoadWishes(child.id) })));
+  localStorage.setItem(`gl:${userId}:xmas_children`, JSON.stringify(children));
+  for (const { child, wishes } of lists) {
+    localStorage.setItem(`gl:${userId}:xmas_wishes_${child.id}`, JSON.stringify(wishes));
   }
 }

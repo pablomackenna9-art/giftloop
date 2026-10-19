@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, Star, X, Send, Volume2, VolumeX } from 'lucide-react';
 import {
-  INTERESTS, loadWishes, saveWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP
+  INTERESTS, loadChildren, saveChildren, loadWishes, saveWishes, XMAS_RED, XMAS_GREEN, XMAS_GOLD, fmtCLP
 } from './xmas-data';
 import type { ChildProfile, XmasWish } from './xmas-data';
 import { loadProducts, loadStores } from './xmas-store-data';
@@ -91,46 +91,42 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
 
   const categories = ['all', ...Array.from(new Set(catalog.map(p => p.category)))];
 
-  const isInCart = (id: string) => wishes.some(w => w.id === id && !w.isFree);
-  const isFav = (id: string) => wishes.find(w => w.id === id)?.isFavorite ?? false;
+  const isInCart = (id: string) => wishes.some(w => (w.productId ?? w.id) === id && !w.isFree);
+  const isFav = (id: string) => wishes.find(w => (w.productId ?? w.id) === id)?.isFavorite ?? false;
 
   const toggleItem = (item: StoreProduct) => {
-    setWishes(prev => {
-      let updated: XmasWish[];
-      if (isInCart(item.id)) {
-        updated = prev.filter(w => w.id !== item.id);
-      } else {
-        const wish: XmasWish = {
-          id: item.id, childId: child.id,
-          name: item.name, price: item.price,
-          image: item.images[0],
-          store: item.storeId, category: item.category,
-          isFavorite: false, isFree: false, adultStatus: 'none',
-        };
-        updated = [...prev, wish];
-      }
-      saveWishes(child.id, updated);
-      return updated;
-    });
+    let updated: XmasWish[];
+    if (wishes.some(w => (w.productId ?? w.id) === item.id)) {
+      updated = wishes.filter(w => (w.productId ?? w.id) !== item.id);
+    } else {
+      const wish: XmasWish = {
+        id: crypto.randomUUID(), productId: item.id, childId: child.id,
+        name: item.name, price: item.price,
+        image: item.images[0],
+        store: item.storeId, category: item.category,
+        isFavorite: false, isFree: false, adultStatus: 'none',
+      };
+      updated = [...wishes, wish];
+    }
+    saveWishes(child.id, updated);
+    setWishes(updated);
   };
 
   const toggleFav = (id: string) => {
     const favCount = wishes.filter(w => w.isFavorite).length;
-    setWishes(prev => {
-      const updated = prev.map(w => {
-        if (w.id !== id) return w;
-        if (!w.isFavorite && favCount >= 3) return w; // max 3
-        return { ...w, isFavorite: !w.isFavorite };
-      });
-      saveWishes(child.id, updated);
-      return updated;
+    const updated = wishes.map(w => {
+      if (w.id !== id && w.productId !== id) return w;
+      if (!w.isFavorite && favCount >= 3) return w; // max 3
+      return { ...w, isFavorite: !w.isFavorite };
     });
+    saveWishes(child.id, updated);
+    setWishes(updated);
   };
 
   const addFreeWish = () => {
     if (!freeText.trim()) return;
     const wish: XmasWish = {
-      id: `free_${Date.now()}`, childId: child.id,
+      id: crypto.randomUUID(), childId: child.id,
       name: freeText.trim(), isFavorite: false, isFree: true, adultStatus: 'none',
     };
     const updated = [...wishes, wish];
@@ -141,11 +137,11 @@ export function ChristmasChildScreen({ child, onBack }: Props) {
   };
 
   const sendLetter = () => {
-    const all = JSON.parse(localStorage.getItem('xmas_children') ?? '[]');
+    const all = loadChildren();
     const updated = all.map((c: ChildProfile) =>
       c.id === child.id ? { ...c, letterSent: true, letterSentAt: new Date().toISOString() } : c
     );
-    localStorage.setItem('xmas_children', JSON.stringify(updated));
+    saveChildren(updated);
     setPhase('sent');
   };
 

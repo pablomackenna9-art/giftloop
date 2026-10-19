@@ -1,3 +1,4 @@
+import { readUserData, writeUserData, storageKey } from '../lib/user-storage';
 // Christmas section shared types and data
 
 export type ChildProfile = {
@@ -19,6 +20,7 @@ export type ChildProfile = {
 export type XmasWish = {
   id: string;
   childId: string;
+  productId?: string;
   name: string;
   price?: number;
   image?: string;
@@ -73,25 +75,27 @@ export const XMAS_CATALOG: Array<{
 
 // localStorage helpers (primary reads; Supabase syncs in background)
 export function loadChildren(): ChildProfile[] {
-  try { return JSON.parse(localStorage.getItem('xmas_children') ?? '[]'); } catch { return []; }
+  return readUserData('xmas_children', []);
 }
 export function saveChildren(c: ChildProfile[]) {
-  localStorage.setItem('xmas_children', JSON.stringify(c));
+  writeUserData('xmas_children', c);
+  writeUserData('pending_children', c);
   // Background sync to Supabase
-  const userId = (() => {
-    try { return JSON.parse(localStorage.getItem('gl_user_cache') ?? 'null')?.id ?? ''; } catch { return ''; }
-  })();
+  const userId = storageKey('').split(':')[1];
   if (userId) {
-    import('../lib/xmas-db').then(({ dbSaveChildren }) => dbSaveChildren(userId, c)).catch(() => {});
+    import('../lib/xmas-db').then(({ dbSaveChildren }) => dbSaveChildren(userId, c)).catch(() => window.dispatchEvent(new Event('giftloop-sync-error')));
   }
 }
 export function loadWishes(childId: string): XmasWish[] {
-  try { return JSON.parse(localStorage.getItem(`xmas_wishes_${childId}`) ?? '[]'); } catch { return []; }
+  return readUserData(`xmas_wishes_${childId}`, []);
 }
 export function saveWishes(childId: string, w: XmasWish[]) {
-  localStorage.setItem(`xmas_wishes_${childId}`, JSON.stringify(w));
+  writeUserData(`xmas_wishes_${childId}`, w);
+  writeUserData(`pending_wishes_${childId}`, w);
   // Background sync to Supabase
-  import('../lib/xmas-db').then(({ dbSaveAllWishes }) => dbSaveAllWishes(childId, w)).catch(() => {});
+  const userId = storageKey('').split(':')[1];
+  import('../lib/xmas-db').then(({ dbSaveAllWishes }) => dbSaveAllWishes(userId, childId, w))
+    .catch(() => window.dispatchEvent(new Event('giftloop-sync-error')));
 }
 
 export const XMAS_RED = '#C0392B';

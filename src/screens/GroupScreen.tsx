@@ -2,26 +2,27 @@ import { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { Button, Sheet, Toast, ParticipantBadge, Spinner, fmt } from '../components/base';
 import { CAMILA_WISHES, GROUP_MEMBERS } from '../components/data';
-import type { GroupMember } from '../components/data';
+import type { Wish, GroupMember } from '../components/data';
 
 type Props = {
+  wish?: Wish;
   onBack: () => void;
   onNavigate: (screen: string, data?: unknown) => void;
 };
 
 type PayStatus = 'idle' | 'pending' | 'ok' | 'fail';
 
-export function GroupScreen({ onBack, onNavigate }: Props) {
-  const wish = CAMILA_WISHES[0];
+export function GroupScreen({ wish: selectedWish, onBack, onNavigate }: Props) {
+  const wish = selectedWish ?? CAMILA_WISHES[0];
   const [showAporte, setShowAporte] = useState(false);
   const [payStatus, setPayStatus] = useState<PayStatus>('idle');
   const [selectedAmount, setSelectedAmount] = useState(40000);
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState('');
-  const [reunido, setReunido] = useState(210000);
+  const [reunido, setReunido] = useState(selectedWish && selectedWish.id !== CAMILA_WISHES[0].id ? 0 : 210000);
   const [members, setMembers] = useState<GroupMember[]>(GROUP_MEMBERS);
   const goal = wish.price;
-  const pct = Math.round((reunido / goal) * 100);
+  const pct = goal > 0 ? Math.min(100, Math.round((reunido / goal) * 100)) : 0;
 
   const handleAporte = () => {
     setPayStatus('pending');

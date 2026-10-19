@@ -1,3 +1,4 @@
+import { usePurchaseRequests } from '../lib/use-purchase-requests';
 import { useState } from 'react';
 import { ChevronLeft, ShoppingBag, ExternalLink, AlertCircle, Check } from 'lucide-react';
 import { loadWishes, XMAS_GREEN, XMAS_RED, XMAS_GOLD, XMAS_LIGHT, fmtCLP } from './xmas-data';
@@ -21,9 +22,10 @@ export function AdultPurchaseScreen({ child, onBack }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set(
     wishes.filter(w => !w.isFree && w.adultStatus !== 'none').map(w => w.id)
   ));
-  const [requests, setRequests] = useState<PurchaseRequest[]>(loadRequests);
+  const [requests, setRequests] = usePurchaseRequests();
   const [proposalView, setProposalView] = useState<PurchaseRequest | null>(null);
   const [toast, setToast] = useState('');
+  const [sending, setSending] = useState(false);
 
   const stores = loadStores();
   const products = loadProducts();
@@ -36,7 +38,7 @@ export function AdultPurchaseScreen({ child, onBack }: Props) {
   };
 
   // Find store product for a wish
-  const findProduct = (wish: XmasWish) => products.find(p => p.name === wish.name || p.id === wish.id);
+  const findProduct = (wish: XmasWish) => products.find(p => p.id === (wish.productId ?? wish.id) || p.name === wish.name);
 
   // Group selected wishes by store
   const groupByStore = () => {
@@ -67,12 +69,15 @@ export function AdultPurchaseScreen({ child, onBack }: Props) {
     .filter(w => selected.has(w.id))
     .reduce((acc, w) => acc + (w.price ?? 0), 0);
 
-  const sendRequests = () => {
+  const sendRequests = async () => {
+    if (sending) return;
+    setSending(true);
+    try {
     const now = new Date().toISOString();
-    const sendAt = new Date(Date.now() + 2 * 3600000).toISOString(); // 2h from now demo
+    const sendAt = now;
     const newReqs: PurchaseRequest[] = groupByStore().map(([storeId, group]) => {
       const items: RequestItem[] = group.items.map(({ wish }) => ({
-        productId: wish.id,
+        productId: wish.productId ?? wish.id,
         productName: wish.name,
         qty: 1,
         knownPrice: wish.price ?? 0,
@@ -80,25 +85,28 @@ export function AdultPurchaseScreen({ child, onBack }: Props) {
         image: wish.image,
       }));
       return {
-        id: `req-${Date.now()}-${storeId.slice(-4)}`,
+        id: crypto.randomUUID(),
         childId: child.id,
-        childName: child.name,
+        childName: '',
         storeId,
         items,
-        status: 'scheduled' as RequestStatus,
+        status: 'sent' as RequestStatus,
         createdAt: now,
-        scheduledSendAt: sendAt,
+        sentAt: sendAt,
         history: [
           { status: 'draft' as RequestStatus, by: 'adult' as const, at: now },
-          { status: 'scheduled' as RequestStatus, by: 'adult' as const, at: now, note: `Envío programado: ${new Date(sendAt).toLocaleString('es-CL')}` },
+          { status: 'sent' as RequestStatus, by: 'adult' as const, at: now, note: 'Enviada por el adulto' },
         ],
       };
     });
 
     const all = [...requests, ...newReqs];
-    setRequests(all); saveRequests(all);
+    await saveRequests(all); setRequests(all);
     setPhase('requests');
-    showToast(`${newReqs.length} solicitudes programadas ✓`);
+    showToast(`${newReqs.length} solicitudes enviadas ✓`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No pudimos enviar las solicitudes.');
+    } finally { setSending(false); }
   };
 
   // ── PHASE: SELECT ──────────────────────────────────────────────────────────
@@ -265,7 +273,7 @@ export function AdultPurchaseScreen({ child, onBack }: Props) {
             <p className="text-[13px] font-semibold text-ink">{groups.length} tiendas · {selected.size} regalos</p>
             <p className="text-[14px] font-bold text-ink">{fmtCLP(totalSelected)}</p>
           </div>
-          <button onClick={sendRequests}
+          <button disabled={sending} onClick={sendRequests}
             className="w-full h-13 rounded-18 text-[15px] font-bold text-white py-3 flex items-center justify-center gap-2"
             style={{ background: XMAS_RED }}>
             <ShoppingBag size={18} /> Enviar solicitudes a las tiendas
@@ -363,9 +371,19 @@ export function AdultPurchaseScreen({ child, onBack }: Props) {
               const updated = requests.map(r => r.id === proposalView.id
                 ? { ...r, status: 'pending_payment' as RequestStatus, history: [...r.history, { status: 'pending_payment' as RequestStatus, by: 'adult' as const, at: new Date().toISOString() }] }
                 : r);
-              setRequests(updated); saveRequests(updated);
-              window.open(p.paymentLink, '_blank');
-              setPhase('requests'); setProposalView(null);
+              let paymentUrl: URL;
+              try {
+                paymentUrl = new URL(p.paymentLink);
+                if (!['https:', 'http:'].includes(paymentUrl.protocol)) throw new Error();
+              } catch { showToast('La tienda debe corregir el enlace de pago.'); return; }
+              const paymentWindow = window.open('about:blank', '_blank');
+              if (paymentWindow) paymentWindow.opener = null;
+              void saveRequests(updated).then(() => {
+                setRequests(updated);
+                if (paymentWindow) paymentWindow.location.href = paymentUrl.href;
+                else showToast('Permite las ventanas emergentes y vuelve a abrir el pago.');
+                setPhase('requests'); setProposalView(null);
+              }).catch(() => { paymentWindow?.close(); showToast('No pudimos guardar la solicitud. Intenta nuevamente.'); });
             }}
             className="h-13 py-3 rounded-18 text-[15px] font-bold text-white flex items-center justify-center gap-2"
             style={{ background: XMAS_RED }}>

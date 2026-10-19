@@ -1,3 +1,4 @@
+import { usePurchaseRequests } from '../lib/use-purchase-requests';
 import { useState } from 'react';
 import { ChevronLeft, Plus, Upload, Download, Check, X, AlertCircle, BarChart2, Store, Package, ShoppingBag, Megaphone, FileText } from 'lucide-react';
 import {
@@ -402,7 +403,7 @@ function TabCatalogo() {
 
 // ── SOLICITUDES ────────────────────────────────────────────────────────────────
 function TabSolicitudes() {
-  const [requests, setRequests] = useState<PurchaseRequest[]>(loadRequests);
+  const [requests, setRequests] = usePurchaseRequests();
   const stores = loadStores();
   const [filterStatus, setFilterStatus] = useState<RequestStatus | 'all'>('all');
 
@@ -413,7 +414,7 @@ function TabSolicitudes() {
     const updated = requests.map(r =>
       r.status === 'scheduled' ? { ...r, status: 'sent' as RequestStatus, sentAt: now, history: [...r.history, { status: 'sent' as RequestStatus, by: 'system' as const, at: now, note: 'Lote manual de demostración' }] } : r
     );
-    setRequests(updated); saveRequests(updated);
+    void saveRequests(updated).then(() => setRequests(updated)).catch(() => {});
   };
 
   const scheduled = requests.filter(r => r.status === 'scheduled').length;
@@ -423,8 +424,8 @@ function TabSolicitudes() {
       {scheduled > 0 && (
         <div className="rounded-16 p-3 flex items-center gap-3" style={{ background: `${XMAS_GOLD}18`, border: `1px solid ${XMAS_GOLD}44` }}>
           <div className="flex-1">
-            <p className="text-[13px] font-bold text-ink">{scheduled} solicitudes programadas para las 20:00</p>
-            <p className="text-[11px] text-ink-muted">Próximo envío automático: hoy 20:00 · Puedes enviar ahora manualmente</p>
+            <p className="text-[13px] font-bold text-ink">{scheduled} solicitudes pendientes de envío manual</p>
+            <p className="text-[11px] text-ink-muted">Envía el lote para que aparezca en los paneles de las tiendas.</p>
           </div>
           <button onClick={sendBatch}
             className="flex-shrink-0 h-9 px-3 rounded-12 text-[12px] font-bold text-white"

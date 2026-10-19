@@ -9,7 +9,7 @@
     "scraper": "tsx server/src/index.ts",
     "scraper:legacy": "node server/index.js",
     "frontend": "vite",
-    "test": "tsx --test server/tests/productExtractor.test.ts",
+    "test": "tsx --test server/tests/*.test.ts",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },

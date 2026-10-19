@@ -1,3 +1,5 @@
+import { readUserData, writeUserData, storageKey } from '../lib/user-storage';
+import { supabase } from '../lib/supabase';
 // Multi-store catalog, purchase requests, campaigns — GiftLoop Christmas
 
 // ── TYPES ─────────────────────────────────────────────────────────────────────
@@ -476,10 +478,39 @@ export function saveProducts(p: StoreProduct[]) {
 }
 
 export function loadRequests(): PurchaseRequest[] {
-  try { return JSON.parse(localStorage.getItem('xmas_requests') ?? 'null') ?? DEMO_REQUESTS; } catch { return DEMO_REQUESTS; }
+  return readUserData('xmas_requests', []);
 }
-export function saveRequests(r: PurchaseRequest[]) {
-  localStorage.setItem('xmas_requests', JSON.stringify(r));
+let requestQueue = Promise.resolve();
+export function saveRequests(r: PurchaseRequest[]): Promise<void> {
+  const previous = loadRequests();
+  const changes = r.filter(item => JSON.stringify(previous.find(old => old.id === item.id)) !== JSON.stringify(item));
+  const key = storageKey('xmas_requests');
+  const client = supabase;
+  const next = requestQueue.catch(() => {}).then(async () => {
+    if (client) {
+      const { data } = await client.auth.getSession();
+      if (data.session?.user.id !== key.split(':')[1]) throw new Error('La sesión cambió. Ingresa nuevamente.');
+    }
+    if (client && changes.length) {
+      const { error } = await client.rpc('save_purchase_requests', { p_requests: changes });
+      if (error) throw new Error('No pudimos guardar las solicitudes. Intenta nuevamente.');
+    }
+    localStorage.setItem(key, JSON.stringify(r));
+  });
+  requestQueue = next;
+  next.catch(() => window.dispatchEvent(new Event('giftloop-sync-error')));
+  return next;
+}
+export async function syncRequests(userId: string) {
+  if (!supabase) return;
+  await requestQueue.catch(() => {});
+  const before = await supabase.auth.getSession();
+  if (before.data.session?.user.id !== userId) return;
+  const { data, error } = await supabase.from('purchase_requests').select('payload');
+  if (error) throw error;
+  const after = await supabase.auth.getSession();
+  if (after.data.session?.user.id !== userId) return;
+  localStorage.setItem(`gl:${userId}:xmas_requests`, JSON.stringify((data ?? []).map(row => row.payload)));
 }
 
 export function loadCampaigns(): Campaign[] {

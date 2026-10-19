@@ -32,9 +32,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verificar que la llamada viene de Vercel Cron (o de un admin con la clave)
   const cronSecret  = process.env['CRON_SECRET'] ?? '';
   const authHeader  = String(req.headers['authorization'] ?? '');
-  const isVercelCron = req.headers['x-vercel-cron'] === '1';
 
-  if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     res.status(401).json({ ok: false, error: 'Unauthorized' });
     return;
   }

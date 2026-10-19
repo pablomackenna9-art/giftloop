@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Plus, Share } from 'lucide-react';
 import { Button, Chip, Sheet, Toast, GiftBox3D, EMPTY_PROFILE_BOX, fmt } from '../components/base';
-import { MY_LISTS, MY_WISHES, FRIENDS_LIST } from '../components/data';
+import { loadPersonalWishes } from '../lib/wishes';
+import { MY_LISTS, FRIENDS_LIST } from '../components/data';
 import type { AppUser } from '../App';
 
 type Props = {
@@ -15,7 +16,7 @@ export function ProfileScreen({ currentUser, onNavigate, onLogout }: Props) {
   const [visibility, setVisibility] = useState<'link' | 'friends' | 'private'>('link');
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState('');
-  const wishes = MY_WISHES;
+  const wishes = loadPersonalWishes();
 
   const hasContent = wishes.length > 0;
 

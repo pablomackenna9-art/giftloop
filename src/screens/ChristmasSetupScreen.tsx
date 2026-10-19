@@ -55,12 +55,12 @@ export function ChristmasSetupScreen({ existing, onBack, onDone }: Props) {
   };
 
   const finish = () => {
-    const id = existing?.id ?? `child_${Date.now()}`;
+    const id = existing?.id ?? crypto.randomUUID();
     const child: ChildProfile = {
       id, name: name.trim(), age, country, santaName,
       parentMessage: parentMessage.trim() || undefined,
       interests, exclusions, maxGiftPrice: maxGift,
-      adultBudget: budget, setupDone: true, letterSent: false,
+      adultBudget: budget, setupDone: true, letterSent: existing?.letterSent ?? false, letterSentAt: existing?.letterSentAt,
     };
     const all = loadChildren();
     const idx = all.findIndex(c => c.id === id);
